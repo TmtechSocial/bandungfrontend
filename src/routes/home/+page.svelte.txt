@@ -1,0 +1,140 @@
+<script lang="ts">
+  const camundaUrl = import.meta.env.VITE_CAMUNDA_API_URL;
+  import { onMount } from "svelte";
+  import axios from "axios";
+  import { writable } from "svelte/store";
+  import { goto } from "$app/navigation";
+
+  export let data;
+  const sessionData = data.sessionData;
+  const user = sessionData.user;
+  const groups = sessionData.groups;
+
+  const processDefinitions = writable([]);
+  const loading = writable(true);
+  const error = writable(null);
+
+  // Menggunakan approach yang lebih efisien
+  onMount(async () => {
+    try {
+      // 1. Langsung ambil process definitions untuk user yang login
+      const userProcessResponse = await axios.get(
+        `${camundaUrl}process-definition?startableBy=${user.username}&latestVersion=true`,
+        {
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      console.log("User Process Response:", userProcessResponse.data);
+
+      if (userProcessResponse.data.length === 0) {
+        loading.set(false);
+        return;
+      }
+
+      // 2. Parallel request untuk dynamic home data
+      const [dynamicHomeResponse] = await Promise.allSettled([
+        axios.get("https://mirorim.ddns.net:6789/backendBandung/dynamicHome")
+      ]);
+
+      let dynamicHomeData = [];
+      if (dynamicHomeResponse.status === 'fulfilled') {
+        dynamicHomeData = dynamicHomeResponse.value.data.data;
+        console.log("Dynamic Home Data:", dynamicHomeData);
+      } else {
+        console.warn("Could not fetch dynamic home data:", dynamicHomeResponse.reason);
+      }
+
+      // 3. Filter dan tambahkan icon
+      const filteredProcesses = userProcessResponse.data
+        .filter(process => {
+          // Jika tidak ada dynamicHome data, tampilkan semua process
+          if (dynamicHomeData.length === 0) return true;
+          return dynamicHomeData.some(item => item.process === process.key);
+        })
+        .map(process => {
+          const matched = dynamicHomeData.find(
+            item => item.process === process.key
+          );
+          return {
+            ...process,
+            icon: matched?.icon || "defaultIcon",
+            // Tambahkan info grup user untuk display
+            userGroups: groups.map(g => g.name || g.id)
+          };
+        });
+
+      processDefinitions.set(filteredProcesses);
+
+    } catch (err) {
+      console.error("Error loading processes:", err);
+      error.set(err.response ? err.response.data : err.message);
+    } finally {
+      loading.set(false);
+    }
+  });
+
+  const handleProcessClick = (process: any) => {
+    goto(`/form?process=${process.key}`);
+  };
+
+  // Computed property untuk menentukan apakah user memiliki akses
+  $: hasAccess = $processDefinitions.length > 0;
+</script>
+
+<!-- Template -->
+{#if !hasAccess && !$loading}
+  <p class="text-center">You don't have access to start process definitions.</p>
+{:else}
+  {#if $loading}
+    <p class="text-start text-xl mt-8">Loading process definitions...</p>
+  {:else if $error}
+    <p class="text-start text-red-500">Error: {$error}</p>
+  {:else}
+    {#if $processDefinitions.length > 0}
+      <p class="text-md font-bold text-start">
+        {#each $processDefinitions as process, index (index)}
+          {#if index === 0}
+            <span>
+              {process.key.split(".")[0].replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+            </span>
+          {/if}
+        {/each}
+      </p>
+    {:else}
+      <p class="text-start">No available processes.</p>
+    {/if}
+
+    {#if $processDefinitions.length > 0}
+      <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-2">
+        {#each $processDefinitions as process}
+          <div
+            class="flex flex-col sm:flex-row items-center bg-slate-200 shadow-md rounded-lg p-4 hover:scale-105 transform transition-all cursor-pointer"
+            on:click={() => handleProcessClick(process)}
+          >
+            <img
+              src={`/images/${process.icon}.svg`}
+              alt={process.key.split(".")[0]}
+              class="w-8 h-9 rounded-md sm:mr-4"
+            />
+            <div class="text-center sm:text-left">
+              {#if process.key.includes(".")}
+                <strong class="text-sm sm:text-lg block text-myPrimary">
+                  {process.key.split(".")[1].replace(/_/g, " ")}
+                </strong>
+              {:else}
+                <strong class="text-sm sm:text-lg">{process.key.replace(/_/g, " ")}</strong>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  {/if}
+{/if}
+
+<style>
+  /* Styling tambahan jika diperlukan */
+</style>

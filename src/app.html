@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%sveltekit.assets%/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    %sveltekit.head%
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdn.form.io/formiojs/formio.form.min.css"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script>
+      // Tambahkan class no-mobile-style ke <html> dan <body> seawal mungkin
+      (function() {
+        var params = new URLSearchParams(window.location.search);
+        var process = params.get('process');
+        if (
+          process === 'Mirorim_Operasional.Print.Print_Kurir' ||
+          process === 'Print_Kurir' ||
+          window.location.pathname.includes('Print_Kurir') ||
+          window.location.href.includes('Print_Kurir') ||
+          process === 'Mirorim_Stock.Mutasi_Gudang.Print_Mutasi_Gudang' ||
+          process === 'Print_Mutasi_Gudang' ||
+          window.location.pathname.includes('Print_Mutasi_Gudang') ||
+          window.location.href.includes('Print_Mutasi_Gudang') ||
+          process === 'Mirorim_Stock.Placement_Inbound.Print_Placement' ||
+          process === 'Print_Placement' ||
+          window.location.pathname.includes('Print_Placement') ||
+          window.location.href.includes('Print_Placement')
+        ) {
+          document.documentElement.classList.add('no-mobile-style');
+          if (document.body) document.body.classList.add('no-mobile-style');
+        }
+      })();
+    </script>
+    <style>
+    </style>
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <div style="display: contents">%sveltekit.body%</div>
+    <script src="https://cdn.form.io/formiojs/formio.form.min.js"></script>
+    <script>
+      // Function to check if current process is Print_Kurir or Print_Invoice
+      function isPrintProcess() {
+        const params = new URLSearchParams(window.location.search);
+        const process = params.get('process');
+        
+        // Check multiple possible parameter variations
+        return process === 'Mirorim_Operasional.Print.Print_Kurir' ||
+               process === 'Print_Kurir' ||
+               window.location.pathname.includes('Print_Kurir') ||
+               window.location.href.includes('Print_Kurir') ||
+               process === 'Mirorim_Operasional.Refill.Print_Invoice' ||
+               process === 'Print_Invoice' ||
+               window.location.pathname.includes('Print_Invoice') ||
+               window.location.href.includes('Print_Invoice') ||
+               process === 'Mirorim_Stock.Mutasi_Gudang.Print_Mutasi_Gudang' ||
+               process === 'Print_Mutasi_Gudang' ||
+               window.location.pathname.includes('Print_Mutasi_Gudang') ||
+               window.location.href.includes('Print_Mutasi_Gudang') ||
+               process === 'Mirorim_Stock.Placement_Inbound.Print_Placement' ||
+               process === 'Print_Placement' ||
+               window.location.pathname.includes('Print_Placement') ||
+               window.location.href.includes('Print_Placement');
+      }
+      
+      // Function to check if current process is Print_Invoice specifically
+      function isPrintInvoiceProcess() {
+        const params = new URLSearchParams(window.location.search);
+        const process = params.get('process');
+        
+        return process === 'Mirorim_Operasional.Refill.Print_Invoice' ||
+               process === 'Print_Invoice' ||
+               window.location.pathname.includes('Print_Invoice') ||
+               window.location.href.includes('Print_Invoice');
+      }
+      
+
+      // Function to apply Print specific styles
+      function applyPrintStyles() {
+        if (isPrintProcess()) {
+          document.body.classList.add('no-mobile-style');
+          console.log('Print process detected - Mobile styles disabled');
+          
+          // Additional specific styles for print layout if needed
+          const printStyles = document.createElement('style');
+          printStyles.id = 'print-styles';
+          printStyles.textContent = `
+            @media print {
+              body.no-mobile-style .datagrid-table {
+                font-size: 12px;
+              }
+              body.no-mobile-style .datagrid-table td,
+              body.no-mobile-style .datagrid-table th {
+                padding: 15px 4px !important;
+              }
+            }
+          `;
+          document.head.appendChild(printStyles);
+        }
+      }
+      
+      // Function to add dynamic labels to table cells in mobile view
+      function addMobileLabels() {
+        // Skip if Print_Kurir process
+        if (isPrintProcess()) {
+          return;
+        }
+        
+        // Find all data grid tables
+        const tables = document.querySelectorAll('.datagrid-table');
+        
+        tables.forEach(table => {
+          // Get the header labels from thead
+          const headers = Array.from(table.querySelectorAll('thead th')).map(th => {
+            // Clean up the text content, removing any screen reader only text
+            const text = th.textContent || th.innerText || '';
+            return text.replace(/^\s*\n*\s*/, '').replace(/\s*\n*\s*$/, '').trim();
+          });
+          
+          // Get all data rows (tbody tr)
+          const rows = table.querySelectorAll('tbody tr');
+          
+          rows.forEach(row => {
+            // Get all cells in this row
+            const cells = row.querySelectorAll('td');
+            
+            cells.forEach((cell, index) => {
+              // Skip if no header or if it's the first cell (product name)
+              if (!headers[index] || headers[index] === '') {
+                return;
+              }
+              
+              // Set the data attribute for the CSS :before pseudo-element
+              cell.setAttribute('data-label', headers[index]);
+            });
+          });
+        });
+      }
+      
+      // Function to update labels when content changes (for dynamic content)
+      function initMobileLabelObserver() {
+        // Skip if Print_Kurir process
+        if (isPrintProcess()) {
+          return;
+        }
+        
+        // Create a mutation observer to watch for changes in table content
+        const observer = new MutationObserver(function(mutations) {
+          let shouldUpdate = false;
+          
+          mutations.forEach(function(mutation) {
+            // Check if table content was added or changed
+            if (mutation.type === 'childList') {
+              const addedNodes = Array.from(mutation.addedNodes);
+              const hasTableContent = addedNodes.some(node => 
+                node.nodeType === Node.ELEMENT_NODE && 
+                (node.classList.contains('datagrid-table') || 
+                 node.querySelector('.datagrid-table') ||
+                 node.closest('.datagrid-table'))
+              );
+              
+              if (hasTableContent) {
+                shouldUpdate = true;
+              }
+            }
+          });
+          
+          if (shouldUpdate) {
+            // Delay execution to ensure DOM is fully updated
+            setTimeout(addMobileLabels, 100);
+          }
+        });
+        
+        // Start observing
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      }
+      
+      // Enhanced CSS injection for dynamic labels
+      function injectDynamicLabelStyles() {
+        // Skip if Print_Kurir process
+        if (isPrintProcess()) {
+          return;
+        }
+        
+        const style = document.createElement('style');
+        style.id = 'mobile-label-styles';
+        style.textContent = `
+          @media screen and (max-width: 767px) {
+            body:not(.no-mobile-style) .datagrid-table td[data-label]:before {
+              content: attr(data-label) !important;
+            }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      // Function to check process type
+      function getProcessType() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('process') || '';
+      }
+
+      // Main initialization function
+      function initializeApp() {
+        console.log('Initializing app...');
+        console.log('Current URL:', window.location.href);
+        console.log('URL Parameters:', window.location.search);
+        
+        // First, check and apply Print styles
+        applyPrintStyles();
+        
+        // Set process type in body & html attribute
+        const process = getProcessType();
+        if (process) {
+  const processValue = process.includes('Print_Kurir')
+    ? 'Print_Kurir'
+    : process.includes('Print_Invoice')
+    ? 'Print_Invoice'
+    : process.includes('Print_Mutasi_Gudang')
+    ? 'Print_Mutasi_Gudang'
+    : process.includes('Print_Placement')
+    ? 'Print_Placement'
+    : process;
+
+  document.body.setAttribute('data-process', processValue);
+  document.documentElement.setAttribute('data-process', processValue);
+}
+
+        
+        // Then initialize mobile features if not Print process
+        if (!isPrintProcess()) {
+          // Inject the dynamic label styles
+          injectDynamicLabelStyles();
+          
+          // Add initial labels
+          addMobileLabels();
+          
+          // Set up observer for dynamic content
+          initMobileLabelObserver();
+          
+          // Also run after delays to catch late-loading content
+          setTimeout(addMobileLabels, 500);
+          setTimeout(addMobileLabels, 1000);
+        }
+      }
+      
+      // Initialize when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeApp);
+      } else {
+        // DOM is already loaded
+        initializeApp();
+      }
+      
+      // Re-run when window is resized (in case of orientation change)
+      window.addEventListener('resize', function() {
+        if (window.innerWidth <= 767 && !isPrintProcess()) {
+          setTimeout(addMobileLabels, 100);
+        }
+      });
+      
+      // For SvelteKit/form.io integration - run when formio is ready
+      if (typeof Formio !== 'undefined') {
+        document.addEventListener('formReady', function() {
+          if (!isPrintProcess()) {
+            addMobileLabels();
+          }
+        });
+        document.addEventListener('formLoad', function() {
+          if (!isPrintProcess()) {
+            addMobileLabels();
+          }
+        });
+      }
+      
+      // Additional check for hash changes or navigation
+      window.addEventListener('hashchange', function() {
+        console.log('Hash changed, re-checking process...');
+        setTimeout(initializeApp, 100);
+      });
+      
+      // For SPA navigation
+      window.addEventListener('popstate', function() {
+        console.log('Navigation detected, re-checking process...');
+        setTimeout(initializeApp, 100);
+      });
+    </script>
+  </body>
+</html>
