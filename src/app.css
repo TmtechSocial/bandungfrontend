@@ -9,21 +9,6 @@ span.sr-only {
   display: none !important;
 }
 
-/* Kalau field hidden (pakai style inline display:none), 
-   tetap jaga slot tapi sembunyiin isi */
-.formio-component.keep-slot[style*="display: none"] {
-  display: table-cell !important;  /* jangan collapse */
-  visibility: hidden !important;   /* isinya ilang */
-  pointer-events: none;
-}
-
-/* Kalau visible, biarin normal */
-.formio-component.keep-slot {
-  display: table-cell !important;
-  visibility: visible !important;
-  pointer-events: auto;
-}
-
 tfoot {
   display: none !important;
 }
@@ -37,17 +22,13 @@ tfoot {
   color: white;
 }
 
-.btn-qr button  { background-color: #28a745 !important; color: white !important; }
-.btn-products button  { background-color: #ffc107 !important; color: black !important; }
-
-
 .big-text-date input {
   font-size: 4rem;
   font-weight: 900;
 }
 
 .big-font_print input {
-  font-size: 30px;
+  font-size: 20px;
   font-weight: bold;
 }
 
@@ -351,136 +332,6 @@ input[type="checkbox"] {
 
   .datagrid-table tbody tr:hover {
     background-color: #f8f9fa;
-  }
-}
-
-@media screen and (max-width: 767px) {
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table,
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table tbody,
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table tr,
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table td,
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table thead,
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table thead tr,
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table thead tr th,
-  html.no-mobile-style[data-process="Print_Placement"]
-    .datagrid-table
-    thead
-    tr
-    th:first-child,
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table tfoot,
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table tfoot tr,
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table tfoot td,
-  html.no-mobile-style[data-process="Print_Placement"]
-    .datagrid-table
-    .formio-button-add-row,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table tbody,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table tr,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table td,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table thead,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table thead tr,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table thead tr th,
-  body.no-mobile-style[data-process="Print_Placement"]
-    .datagrid-table
-    thead
-    tr
-    th:first-child,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table tfoot,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table tfoot tr,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table tfoot td,
-  body.no-mobile-style[data-process="Print_Placement"]
-    .datagrid-table
-    .formio-button-add-row {
-    all: revert !important;
-    display: none !important;
-  }
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table td {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 5rem;
-    font-size: 100px !important;
-  }
-  body.no-mobile-style[data-process="Print_Placement"]
-    .datagrid-table
-    td
-    .formio-component {
-    flex: 0 0 100%;
-    max-width: 100%;
-    width: 100%;
-    font-size: 100px !important;
-  }
-  body.no-mobile-style[data-process="Print_Placement"] .form-control {
-    font-size: 27px !important;
-  }
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table td:before,
-  html.no-mobile-style[data-process="Print_Placement"]
-    .datagrid-table
-    td[data-label]:before,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table td:before,
-  body.no-mobile-style[data-process="Print_Placement"]
-    .datagrid-table
-    td[data-label]:before {
-    display: none !important;
-    content: none !important;
-  }
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table {
-    display: table !important;
-    width: 100% !important;
-    border-collapse: collapse !important;
-  }
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table thead,
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table tbody,
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table tfoot,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table thead,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table tbody,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table tfoot {
-    display: table-header-group !important;
-  }
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table tbody,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table tbody {
-    display: table-row-group !important;
-  }
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table tfoot,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table tfoot {
-    display: table-footer-group !important;
-  }
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table tr,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table tr {
-    display: table-row !important;
-    margin-bottom: 0 !important;
-    border: none !important;
-    border-radius: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-    background-color: transparent !important;
-  }
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table td,
-  html.no-mobile-style[data-process="Print_Placement"] .datagrid-table th,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table td,
-  body.no-mobile-style[data-process="Print_Placement"] .datagrid-table th {
-    display: table-cell !important;
-    flex-direction: unset !important;
-    justify-content: unset !important;
-    align-items: unset !important;
-    padding: 12px 8px !important;
-    border: 0px solid #dee2e6 !important;
-    min-height: unset !important;
-    margin: 0 !important;
-  }
-  html.no-mobile-style[data-process="Print_Placement"]
-    .datagrid-table
-    td:first-child,
-  body.no-mobile-style[data-process="Print_Placement"]
-    .datagrid-table
-    td:first-child {
-    display: table-cell !important;
-    padding: 12px 8px !important;
-    font-weight: normal !important;
-    background-color: transparent !important;
-    border-radius: 0 !important;
-    margin: 0 !important;
-    font-size: inherit !important;
-    line-height: inherit !important;
   }
 }
 
@@ -917,4 +768,30 @@ body.no-mobile-style[data-process="Print_Invoice"] .datagrid-table td .form-cont
   text-transform: uppercase;
   border: 2px solid #ff0000;
   padding: 8px;
+}
+
+.urgent-alert .formio-editor-read-only-content {
+  background-color: #ffcccc !important;
+  color: #b30000 !important;
+  font-weight: bold;
+  text-transform: uppercase;
+  border: 2px solid #ff0000;
+  padding: 8px;
+}
+
+.safe-alert input {
+  background-color: #dbffe7 !important;
+  color: #23c000 !important;
+  font-weight: bold;
+  text-transform: uppercase;
+  border: 2px solid #028700;
+  padding: 8px;
+}
+
+.datagrid-table td:has(.justifyToppppppppppp) {
+  vertical-align: top;
+}
+
+.justifyToppppppppppp {
+  margin-top: 0;
 }
