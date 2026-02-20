@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { writable } from 'svelte/store';
   export let data;
-  const sessionData = data.sessionData;
+  const {sessionData, iframeUrl} = data;
   let key_ = "";
   let instances = writable([]);
   let performance = writable([]);
@@ -253,6 +253,11 @@ function drawTaskChart(taskData) {
 
 <main>
   <h1>Dashboards</h1>
+<iframe
+    src={iframeUrl}
+    style="width:100vw;height:100vh;border:0"
+    allowfullscreen
+  />
   <select bind:value={key_} on:change={() => { fetchInstances(); fetchTaskCount(); fetchPerformance(); fetchTimeline();}}>
     <option value="">Select a key</option>
     {#each $procDefKeys as key}

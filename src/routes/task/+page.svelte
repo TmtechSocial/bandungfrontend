@@ -53,14 +53,14 @@
 
   // Enhanced handler untuk Firestore events
   function handleFirestoreTaskEvent(eventData, eventId) {
-    console.log("📡 Real-time task event received:", eventData);
+    console.log("?? Real-time task event received:", eventData);
 
     const { type, processInstanceId, taskDefinitionKey, assignee, userId } =
       eventData;
 
     // Skip jika event dari user sendiri (untuk menghindari double update)
     if (userId === sessionData.user.username) {
-      console.log("⏭️ Skipping own event to avoid duplication");
+      console.log("?? Skipping own event to avoid duplication");
       return;
     }
 
@@ -80,10 +80,10 @@
       if (updateSuccessful) {
         // toast.info(`Task "${taskName}" ${action} by ${user}`, 4000);
         console.log(
-          `✅ Real-time update: Task "${taskName}" ${action} by ${user}`
+          `? Real-time update: Task "${taskName}" ${action} by ${user}`
         );
       } else {
-        console.warn(`⚠️ Failed to update task "${taskName}" in real-time`);
+        console.warn(`?? Failed to update task "${taskName}" in real-time`);
       }
     }
   }
@@ -103,11 +103,11 @@
 
         // Skip if we just fetched data recently
         if (timeSinceLastFetch < MIN_REFRESH_INTERVAL) {
-          console.log("⏭️ Skipping refresh - too soon after last fetch");
+          console.log("?? Skipping refresh - too soon after last fetch");
           return;
         }
 
-        console.log("🔄 Smart refresh triggered");
+        console.log("?? Smart refresh triggered");
         isRefreshing = true;
         lastDataFetch = now;
         fetchAllTasks().finally(() => {
@@ -194,6 +194,7 @@ let groupIds = [];
   // Add processInstanceId filter option
   let filterColumns = [
     { key: "taskId", label: "Task Definition" },
+    { key: "created", label: "Created Date" },
     { key: "businessKey1", label: "Business Key 1" },
     { key: "businessKey2", label: "Business Key 2" },
     { key: "businessKey3", label: "Business Key 3" },
@@ -278,7 +279,7 @@ console.log('groupsId: ',groupIds);
     }
 
     // Preload critical data in background
-    console.log("🚀 Starting optimized data preload...");
+    console.log("?? Starting optimized data preload...");
 
     // Start immediate data fetch with priority loading
     const preloadStart = performance.now();
@@ -286,12 +287,12 @@ console.log('groupsId: ',groupIds);
     const preloadEnd = performance.now();
 
     console.log(
-      `✅ Initial data loaded in ${(preloadEnd - preloadStart).toFixed(2)}ms`
+      `? Initial data loaded in ${(preloadEnd - preloadStart).toFixed(2)}ms`
     );
 
     // Preload additional data that might be needed soon
     setTimeout(() => {
-      console.log("🔄 Background preload for secondary data...");
+      console.log("?? Background preload for secondary data...");
       // Preload any secondary data here if needed
     }, 2000);
   });
@@ -319,7 +320,7 @@ console.log('groupsId: ',groupIds);
     // Find tasks currently claimed by current user
     const claimed = tasks.filter((t) => t.assignee === userId);
     if (!claimed || claimed.length === 0) {
-      // No claimed tasks — proceed
+      // No claimed tasks � proceed
       goto(targetRoute);
       return;
     }
@@ -576,6 +577,13 @@ console.log('groupsId: ',groupIds);
     return dateString.split(".")[0].replace("T", " ");
   }
 
+  function formatDateOnly(dateString) {
+    if (!dateString) return "";
+    // Extract just the date part in yyyy-mm-dd format
+    // Remove time part and any extra characters
+    return dateString.split(" ")[0].split("T")[0];
+  }
+
   function sortTasksByHighPriority(tasks) {
     return tasks.sort((a, b) => {
       const aIsHighPriority = isHighPriority(a);
@@ -643,7 +651,7 @@ console.log('groupsId: ',groupIds);
     // Check cache first
     const now = Date.now();
     if (tasksCache && now - cacheTimestamp < CACHE_DURATION) {
-      console.log("⚡ Using cached tasks data");
+      console.log("? Using cached tasks data");
       loadingStage = "Loading from cache...";
       groupedTasks = tasksCache.groupedTasks;
       tasks = tasksCache.tasks;
@@ -653,7 +661,7 @@ console.log('groupsId: ',groupIds);
 
     try {
       console.time("fetchAllTasks");
-      console.log("🚀 Starting optimized fetchAllTasks...");
+      console.log("?? Starting optimized fetchAllTasks...");
       loading = true;
       isRefreshing = true;
       loadingStage = "Initializing...";
@@ -783,8 +791,8 @@ console.log('groupsId: ',groupIds);
       performanceMetrics.processEnd = performance.now();
       performanceMetrics.renderStart = performance.now();
 
-      console.log("✅ Fetched unique tasks:", tasks.length);
-      console.log("📊 Grouped tasks:", Object.keys(groupedTasks));
+      console.log("? Fetched unique tasks:", tasks.length);
+      console.log("?? Grouped tasks:", Object.keys(groupedTasks));
 
       // Performance metrics
       const fetchTime = (
@@ -794,7 +802,7 @@ console.log('groupsId: ',groupIds);
         performanceMetrics.processEnd - performanceMetrics.processStart
       ).toFixed(2);
       console.log(
-        `⚡ Performance: Fetch ${fetchTime}ms, Process ${processTime}ms`
+        `? Performance: Fetch ${fetchTime}ms, Process ${processTime}ms`
       );
 
       // Cache the results
@@ -812,7 +820,7 @@ console.log('groupsId: ',groupIds);
       }
     } catch (err) {
       error = err.message;
-      console.error("❌ Error fetching tasks:", err);
+      console.error("? Error fetching tasks:", err);
     } finally {
       loading = false;
       isRefreshing = false;
@@ -918,8 +926,8 @@ console.log('groupsId: ',groupIds);
         );
         selectedInstances = new Set(filteredSelections);
         
-        console.log('🔄 Checkbox removed during switch for:', { processInstanceId, taskId });
-        console.log('🔄 Remaining selections after switch:', Array.from(selectedInstances));
+        console.log('?? Checkbox removed during switch for:', { processInstanceId, taskId });
+        console.log('?? Remaining selections after switch:', Array.from(selectedInstances));
 
         // Close modal
         closeTaskConflictModal();
@@ -979,8 +987,8 @@ console.log('groupsId: ',groupIds);
       );
       selectedInstances = new Set(filteredSelections);
       
-      console.log('🔄 Checkbox removed for:', { processInstanceId, taskId });
-      console.log('🔄 Remaining selections:', Array.from(selectedInstances));
+      console.log('?? Checkbox removed for:', { processInstanceId, taskId });
+      console.log('?? Remaining selections:', Array.from(selectedInstances));
     }
 
     toast.info("Continued with current task", 2000);
@@ -991,7 +999,7 @@ console.log('groupsId: ',groupIds);
   function canUserClaimTask(task) {
     // ADDED: Validate task object
     if (!task || !task.processInstanceId || !task.taskDefinitionKey) {
-      console.error("❌ Invalid task object passed to canUserClaimTask:", task);
+      console.error("? Invalid task object passed to canUserClaimTask:", task);
       return {
         canClaim: false,
         reason: "Invalid task data",
@@ -1290,7 +1298,7 @@ console.log('groupsId: ',groupIds);
     assignee
   ) {
     console.log(
-      `⚡ Fast updating task: ${processInstanceId} - ${taskDefinitionKey} - ${assignee}`
+      `? Fast updating task: ${processInstanceId} - ${taskDefinitionKey} - ${assignee}`
     );
 
     let taskUpdated = false;
@@ -1305,7 +1313,7 @@ console.log('groupsId: ',groupIds);
         tasks[i] = { ...tasks[i], assignee: assignee };
         taskUpdated = true;
         updatedCount++;
-        console.log(`✅ Fast update in tasks array:`, {
+        console.log(`? Fast update in tasks array:`, {
           processInstanceId: tasks[i].processInstanceId,
           taskDefinitionKey: tasks[i].taskDefinitionKey,
           oldAssignee: tasks[i].assignee,
@@ -1327,7 +1335,7 @@ console.log('groupsId: ',groupIds);
           ) {
             found = true;
             updatedCount++;
-            console.log(`✅ Fast update in grouped tasks:`, {
+            console.log(`? Fast update in grouped tasks:`, {
               processInstanceId: task.processInstanceId,
               taskDefinitionKey: task.taskDefinitionKey,
               oldAssignee: task.assignee,
@@ -1378,12 +1386,12 @@ console.log('groupsId: ',groupIds);
     }
 
     console.log(
-      `✅ Task update completed. Updated ${updatedCount} instances. Task found: ${taskUpdated}, Total tasks: ${tasks.length}`
+      `? Task update completed. Updated ${updatedCount} instances. Task found: ${taskUpdated}, Total tasks: ${tasks.length}`
     );
 
     if (!taskUpdated || updatedCount === 0) {
       console.warn(
-        "⚠️ Task not found for real-time update, will use fallback refresh"
+        "?? Task not found for real-time update, will use fallback refresh"
       );
       return false; // Indicate update failed
     }
@@ -1398,7 +1406,7 @@ console.log('groupsId: ',groupIds);
     name
   ) {
     console.log(
-      "⚡ Fast toggling instance:",
+      "? Fast toggling instance:",
       processInstanceId,
       taskDefinitionKey,
       name
@@ -1412,7 +1420,7 @@ console.log('groupsId: ',groupIds);
     );
 
     if (!task) {
-      console.warn("❌ Task not found:", processInstanceId, taskId);
+      console.warn("? Task not found:", processInstanceId, taskId);
       toast.error("Task not found", 2000);
       return;
     }
@@ -1425,7 +1433,7 @@ console.log('groupsId: ',groupIds);
 
     const shouldClaim = !isTaskClaimedByCurrentUser(task);
     console.log(
-      `⚡ ${shouldClaim ? "Claiming" : "Unclaiming"} task immediately`
+      `? ${shouldClaim ? "Claiming" : "Unclaiming"} task immediately`
     );
 
     // If claiming, check for conflicts
@@ -1558,11 +1566,11 @@ console.log('groupsId: ',groupIds);
       updateGroupSelectAllState(taskDefinitionKey);
 
       console.log(
-        "✅ Fast selection update completed:",
+        "? Fast selection update completed:",
         Array.from(selectedInstances)
       );
     } catch (error) {
-      console.error("❌ Error in toggle selection:", error);
+      console.error("? Error in toggle selection:", error);
       toast.error("Failed to update task", 3000);
     } finally {
       // Remove loading state
@@ -2086,12 +2094,24 @@ console.log('groupsId: ',groupIds);
             <th class="text-left px-3 py-2 font-medium text-white">Status</th>
             <th
               class="text-left px-3 py-2 font-medium text-white cursor-pointer"
+              on:click={() => toggleSort("created")}
+            >
+              <div class="flex items-center">
+                Created Date
+                {#if sortField === "created"}
+                  <span class="ml-1">{sortDirection === "asc" ? "?" : "?"}</span
+                  >
+                {/if}
+              </div>
+            </th>
+            <th
+              class="text-left px-3 py-2 font-medium text-white cursor-pointer"
               on:click={() => toggleSort("businessKey1")}
             >
               <div class="flex items-center">
                 Business Key 1
                 {#if sortField === "businessKey1"}
-                  <span class="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span
+                  <span class="ml-1">{sortDirection === "asc" ? "?" : "?"}</span
                   >
                 {/if}
               </div>
@@ -2103,7 +2123,7 @@ console.log('groupsId: ',groupIds);
               <div class="flex items-center">
                 Business Key 2
                 {#if sortField === "businessKey2"}
-                  <span class="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span
+                  <span class="ml-1">{sortDirection === "asc" ? "?" : "?"}</span
                   >
                 {/if}
               </div>
@@ -2115,7 +2135,7 @@ console.log('groupsId: ',groupIds);
               <div class="flex items-center">
                 Business Key 3
                 {#if sortField === "businessKey3"}
-                  <span class="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span
+                  <span class="ml-1">{sortDirection === "asc" ? "?" : "?"}</span
                   >
                 {/if}
               </div>
@@ -2127,10 +2147,16 @@ console.log('groupsId: ',groupIds);
               <div class="flex items-center">
                 Additional
                 {#if sortField === "business_key"}
-                  <span class="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span
+                  <span class="ml-1">{sortDirection === "asc" ? "?" : "?"}</span
                   >
                 {/if}
               </div>
+            </th>
+            <th
+              class="text-left px-3 py-2 font-medium text-white cursor-pointer"
+              on:click={() => toggleSort("created")}
+            >
+        
             </th>
             <th class="text-center w-16 px-2 py-2 font-medium text-white"
               >Delegated</th
@@ -2154,7 +2180,7 @@ console.log('groupsId: ',groupIds);
                 >
                   {#if row.isGroup}
                     <p class="mr-2 text-black font-bold text-xs">
-                      {collapsed[row.taskDefinitionKey] ? "⇩" : "⇧"}
+                      {collapsed[row.taskDefinitionKey] ? "?" : "?"}
                     </p>
                     <span class="truncate"
                       >{row.taskId}
@@ -2267,6 +2293,13 @@ console.log('groupsId: ',groupIds);
     </div>
   {/if}
 </td>
+                <td
+                  class="px-3 py-2 text-xs md:text-sm text-gray-700"
+                >
+                  {#if !row.isGroup && row.created}
+                    {formatDateOnly(row.created)}
+                  {/if}
+                </td>
 
                 <td
                   class="px-2 py-2 text-xs md:text-sm text-gray-700 text-wrap max-w-[150px]"
@@ -2395,7 +2428,7 @@ console.log('groupsId: ',groupIds);
             </p>
             {#each conflictModalData.existingTasks as existingTask}
               <div class="text-sm text-red-700 mb-1">
-                • {getTaskId(existingTask.taskDefinitionKey)}
+                � {getTaskId(existingTask.taskDefinitionKey)}
                 <span class="text-xs text-red-600 block ml-2"
                   >Instance: {existingTask.processInstanceId}</span
                 >
@@ -2447,7 +2480,7 @@ console.log('groupsId: ',groupIds);
             {#each scanConflictTasks as t (t.processInstanceId + '::' + t.taskDefinitionKey)}
               <li class="py-1 border-b last:border-b-0">
                 <strong>{getTaskId(t.taskDefinitionKey)}</strong>
-                <div class="text-xs text-gray-500">Instance: {t.processInstanceId} · Assignee: {t.assignee}</div>
+                <div class="text-xs text-gray-500">Instance: {t.processInstanceId} � Assignee: {t.assignee}</div>
               </li>
             {/each}
           </ul>

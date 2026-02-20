@@ -79,7 +79,15 @@ let ldapData = {}
         </p>
       </div>
 
+      <div class="pt-2">
+        <a
+          href="/form?process=HR_Management.Manage_Password"
+          class="text-sm text-white underline hover:text-blue-200 transition-colors"
+        >
+          Change Password
+        </a>
+      </div>
+      
     </div>
-
   </div>
 </div>

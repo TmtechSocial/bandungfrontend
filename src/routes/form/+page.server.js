@@ -1,6 +1,19 @@
 import { redirect } from "@sveltejs/kit";
 
-export async function load({ cookies }) {
+export async function load({ cookies, url }) {
+    // Cek apakah process adalah HR_Management.Manage_Password
+    const processParam = url.searchParams.get('process');
+    const isPasswordManagement = processParam && processParam.startsWith('HR_Management.Manage_Password');
+
+    // Skip validasi cookie untuk proses manage password
+    if (isPasswordManagement) {
+        return {
+            sessionData: null,
+            isPasswordManagement: true,
+            process: processParam
+        };
+    }
+
     // Debug semua cookie untuk memastikan diterima
 
     // Ambil nilai cookie
@@ -13,10 +26,10 @@ export async function load({ cookies }) {
     // Cek jika salah satu cookie tidak ada
     if (!token || !user || !groups || !baseDn || !cmisAuth) {
         console.log("Salah satu cookie (token, user, groups, baseDn, cmisAuth) tidak ditemukan.");
-        
+
         throw redirect(302, "/login");
     }
-    
+
     let userData, groupData;
     try {
         console.log("users", user);
@@ -39,3 +52,4 @@ export async function load({ cookies }) {
         },
     };
 }
+

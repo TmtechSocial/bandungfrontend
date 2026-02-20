@@ -25,6 +25,7 @@
 		"firebase": "^12.3.0",
 		"html2canvas": "^1.4.1",
 		"html5-qrcode": "^2.3.8",
+		"jsonwebtoken": "^9.0.3",
 		"qr-scanner": "^1.4.2"
 	}
 }

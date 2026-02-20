@@ -66,6 +66,16 @@
         Sign in
       </button>
     </div>
+    
+    <div class="flex justify-center mt-4">
+      <a
+        href="/form?process=HR_Management.Manage_Password"
+        class="text-sm underline transition-colors text-myPrimary hover:text-blue-600"
+      >
+        Forgot Password?
+      </a>
+    </div>
+    
     <div class="flex pt-4 justify-center">
       <p class="text-sm">Versi 1.0.0</p>
     </div>
