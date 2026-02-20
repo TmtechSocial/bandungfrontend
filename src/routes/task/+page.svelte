@@ -2,14 +2,13 @@
   import { onMount, onDestroy } from "svelte";
   import { goto } from "$app/navigation";
   import axios from "axios";
-  import { fetchUserGroups } from '../camunda/camundaUserGroups.js';
+  import { fetchUserGroups } from "../camunda/camundaUserGroups.js";
   // Firebase imports re-enabled for broadcasting
   import { onSnapshot, collection } from "firebase/firestore";
   import { db } from "../../lib/firebaseClient";
   import Toast from "../../lib/components/Toast.svelte";
   import { toasts, toast } from "../../lib/stores/toastStore.js";
 
-  
   let notifications = [];
   let taskList = [];
   let lastEventTimestamp = null;
@@ -43,7 +42,7 @@
       },
       (error) => {
         console.error("Firestore listener error:", error);
-      }
+      },
     );
 
     return () => {
@@ -69,7 +68,7 @@
       const updateSuccessful = updateTaskAssigneeStatus(
         processInstanceId,
         taskDefinitionKey,
-        type === "CLAIMED" ? assignee : null
+        type === "CLAIMED" ? assignee : null,
       );
 
       // Show notification untuk other users' actions
@@ -80,7 +79,7 @@
       if (updateSuccessful) {
         // toast.info(`Task "${taskName}" ${action} by ${user}`, 4000);
         console.log(
-          `? Real-time update: Task "${taskName}" ${action} by ${user}`
+          `? Real-time update: Task "${taskName}" ${action} by ${user}`,
         );
       } else {
         console.warn(`?? Failed to update task "${taskName}" in real-time`);
@@ -134,13 +133,13 @@
   const token = sessionData.token;
   const userId = sessionData.user.username;
 
-let groupIds = [];
+  let groupIds = [];
   onMount(async () => {
     try {
       const groups = await fetchUserGroups(userId);
 
       if (Array.isArray(groups) && groups.length > 0) {
-        groupIds = groups;  // <-- Simpan full object
+        groupIds = groups; // <-- Simpan full object
       } else {
         groupIds = [];
       }
@@ -148,6 +147,15 @@ let groupIds = [];
       groupIds = [];
     }
   });
+
+  $: isMultiClaimMember =
+    (sessionData?.groups || []).some(
+      (g) =>
+        g.id === "MultiClaim" || g.name === "MultiClaim" || g === "MultiClaim",
+    ) ||
+    (groupIds || []).some(
+      (g) => g.id === "MultiClaim" || g.name === "MultiClaim",
+    );
 
   let tasks = [];
   let groupedTasks = {};
@@ -230,23 +238,26 @@ let groupIds = [];
     "OperatorPickingCoordinator",
     "InventoryRetailStaff",
     "InventoryRetailCoordinator",
-    "SalesScanningStaff"
+    "SalesScanningStaff",
   ];
   // Check if user has any of the scanQR groups
 
-    // NEW LOGIC: Show both buttons if user has both scanQRGroups and other groups
-    $: hasScanQRGroup = groupIds.some((group) => scanQRGroups.includes(group.name));
-    $: hasOtherGroup  = groupIds.some((group) => !scanQRGroups.includes(group.name));
-console.log('groupsId: ',groupIds);
+  // NEW LOGIC: Show both buttons if user has both scanQRGroups and other groups
+  $: hasScanQRGroup = groupIds.some((group) =>
+    scanQRGroups.includes(group.name),
+  );
+  $: hasOtherGroup = groupIds.some(
+    (group) => !scanQRGroups.includes(group.name),
+  );
+  console.log("groupsId: ", groupIds);
 
-    $: showScanQRButton         = hasScanQRGroup;
-    $: showScanQRInternalButton = hasOtherGroup;
-
+  $: showScanQRButton = hasScanQRGroup;
+  $: showScanQRInternalButton = hasOtherGroup;
 
   // Derived list of unique taskIds for filter dropdown
   $: uniqueTaskIds = (() => {
     const allTasks = flattenTasks(
-      isFilterActive ? filteredGroupedTasks : groupedTasks
+      isFilterActive ? filteredGroupedTasks : groupedTasks,
     );
     const taskIdSet = new Set();
 
@@ -269,7 +280,7 @@ console.log('groupsId: ',groupIds);
         filterValues = JSON.parse(cachedFilters);
         tempFilterValues = { ...filterValues };
         isFilterActive = Object.values(filterValues).some(
-          (val) => val && val.length > 0
+          (val) => val && val.length > 0,
         );
       } catch (e) {
         console.warn("Failed to parse cached filter values", e);
@@ -287,7 +298,7 @@ console.log('groupsId: ',groupIds);
     const preloadEnd = performance.now();
 
     console.log(
-      `? Initial data loaded in ${(preloadEnd - preloadStart).toFixed(2)}ms`
+      `? Initial data loaded in ${(preloadEnd - preloadStart).toFixed(2)}ms`,
     );
 
     // Preload additional data that might be needed soon
@@ -320,7 +331,7 @@ console.log('groupsId: ',groupIds);
     // Find tasks currently claimed by current user
     const claimed = tasks.filter((t) => t.assignee === userId);
     if (!claimed || claimed.length === 0) {
-      // No claimed tasks — proceed
+      // No claimed tasks ï¿½ proceed
       goto(targetRoute);
       return;
     }
@@ -347,7 +358,7 @@ console.log('groupsId: ',groupIds);
     for (const [k, t] of pairs.entries()) {
       promises.push(
         // call existing handler to unclaim (claim=false)
-        handleClaimUnclaimTask(t.processInstanceId, t.taskDefinitionKey, false)
+        handleClaimUnclaimTask(t.processInstanceId, t.taskDefinitionKey, false),
       );
     }
 
@@ -357,7 +368,10 @@ console.log('groupsId: ',groupIds);
 
       // Remove any of these instances from selectedInstances set
       const remaining = Array.from(selectedInstances).filter((sel) => {
-        return !pairs.has(`${sel.processInstanceId}::${sel.taskDefinitionKey}`) && !pairs.has(`${sel.processInstanceId}::${sel.taskDefinitionKey}`);
+        return (
+          !pairs.has(`${sel.processInstanceId}::${sel.taskDefinitionKey}`) &&
+          !pairs.has(`${sel.processInstanceId}::${sel.taskDefinitionKey}`)
+        );
       });
       selectedInstances = new Set(remaining);
 
@@ -450,7 +464,8 @@ console.log('groupsId: ',groupIds);
 
   function isHighPriority(task) {
     return (
-      task.businessKey2 === "instant" || task.businessKey3 === "Prioritas" ||
+      task.businessKey2 === "instant" ||
+      task.businessKey3 === "Prioritas" ||
       (task.business_key &&
         task.business_key.toLowerCase().includes("prioritas"))
     );
@@ -483,7 +498,7 @@ console.log('groupsId: ',groupIds);
     const targetTask = tasks.find(
       (task) =>
         task.taskDefinitionKey === targetTaskDefinition ||
-        getTaskId(task.taskDefinitionKey).toLowerCase().includes("qc refill")
+        getTaskId(task.taskDefinitionKey).toLowerCase().includes("qc refill"),
     );
 
     return targetTask?.delegated || "";
@@ -516,7 +531,7 @@ console.log('groupsId: ',groupIds);
       if (!collapsed[key]) {
         Object.entries(value).forEach(([childKey, childValue]) => {
           rows.push(
-            ...renderTreeWithQCRefillDelegated(childKey, childValue, level + 1)
+            ...renderTreeWithQCRefillDelegated(childKey, childValue, level + 1),
           );
         });
       }
@@ -528,7 +543,7 @@ console.log('groupsId: ',groupIds);
             .toLowerCase()
             .includes("qc refill") ||
           task.taskDefinitionKey.toLowerCase().includes("qc") ||
-          task.taskDefinitionKey.toLowerCase().includes("refill")
+          task.taskDefinitionKey.toLowerCase().includes("refill"),
       );
 
       const groupDelegated =
@@ -601,7 +616,7 @@ console.log('groupsId: ',groupIds);
     } else if (typeof value === "object" && value !== null) {
       return Object.values(value).reduce(
         (total, subValue) => total + countHighPriorityTasks(subValue),
-        0
+        0,
       );
     }
     return 0;
@@ -680,15 +695,15 @@ console.log('groupsId: ',groupIds);
                 Authorization: `Bearer ${token}`,
               },
               timeout: 15000, // 15 second timeout
-            }
+            },
           )
           .catch((err) => {
             console.warn(
               `Failed to fetch tasks for group ${group.name}:`,
-              err.message
+              err.message,
             );
             return { data: { groupedTasks: {} } }; // Return empty data on error
-          })
+          }),
       );
 
       loadingStage = "Fetching data from server...";
@@ -706,7 +721,7 @@ console.log('groupsId: ',groupIds);
       // Process responses from all groups with optimized algorithm and deduplication
       let processedGroups = 0;
       const processedTaskKeys = new Set(); // Track processed tasks to prevent duplicates
-      
+
       responses.forEach((response) => {
         if (!response.data?.groupedTasks) return;
 
@@ -714,11 +729,11 @@ console.log('groupsId: ',groupIds);
         loadingStage = `Processing group ${processedGroups}/${totalGroups}...`;
 
         const { groupedTasks: fetchedGroupedTasks } = response.data;
-        
+
         // Add deduplication check for tasks
         const dedupTasks = (tasks) => {
           if (Array.isArray(tasks)) {
-            return tasks.filter(task => {
+            return tasks.filter((task) => {
               const taskKey = `${task.processInstanceId}-${task.taskDefinitionKey}`;
               if (processedTaskKeys.has(taskKey)) {
                 return false;
@@ -737,9 +752,9 @@ console.log('groupsId: ',groupIds);
 
           if (Array.isArray(value)) {
             // Apply deduplication before processing with enhanced uniqueness check
-            const dedupedValue = value.filter(task => {
+            const dedupedValue = value.filter((task) => {
               // Create a more specific unique key that includes all relevant identifiers
-              const uniqueKey = `${task.processInstanceId}-${task.taskDefinitionKey}-${task.assignee || 'unassigned'}`;
+              const uniqueKey = `${task.processInstanceId}-${task.taskDefinitionKey}-${task.assignee || "unassigned"}`;
               if (uniqueTasksSet.has(uniqueKey)) {
                 return false;
               }
@@ -802,7 +817,7 @@ console.log('groupsId: ',groupIds);
         performanceMetrics.processEnd - performanceMetrics.processStart
       ).toFixed(2);
       console.log(
-        `? Performance: Fetch ${fetchTime}ms, Process ${processTime}ms`
+        `? Performance: Fetch ${fetchTime}ms, Process ${processTime}ms`,
       );
 
       // Cache the results
@@ -882,7 +897,7 @@ console.log('groupsId: ',groupIds);
   // NEW: Helper function to get user's existing tasks with same taskDefinitionKey
   function getUserExistingTasksOfType(taskDefinitionKey) {
     return tasks.filter(
-      (t) => t.taskDefinitionKey === taskDefinitionKey && t.assignee === userId
+      (t) => t.taskDefinitionKey === taskDefinitionKey && t.assignee === userId,
     );
   }
 
@@ -903,7 +918,7 @@ console.log('groupsId: ',groupIds);
         await handleClaimUnclaimTask(
           existingTask.processInstanceId,
           existingTask.taskDefinitionKey,
-          false // unclaim
+          false, // unclaim
         );
       }
 
@@ -922,12 +937,18 @@ console.log('groupsId: ',groupIds);
             !(
               instance.processInstanceId === processInstanceId &&
               instance.taskId === taskId
-            )
+            ),
         );
         selectedInstances = new Set(filteredSelections);
-        
-        console.log('?? Checkbox removed during switch for:', { processInstanceId, taskId });
-        console.log('?? Remaining selections after switch:', Array.from(selectedInstances));
+
+        console.log("?? Checkbox removed during switch for:", {
+          processInstanceId,
+          taskId,
+        });
+        console.log(
+          "?? Remaining selections after switch:",
+          Array.from(selectedInstances),
+        );
 
         // Close modal
         closeTaskConflictModal();
@@ -941,7 +962,7 @@ console.log('groupsId: ',groupIds);
           await handleClaimUnclaimTask(
             processInstanceId,
             taskDefinitionKey,
-            true
+            true,
           );
 
           // Update UI selection state after successful claim
@@ -983,12 +1004,12 @@ console.log('groupsId: ',groupIds);
           !(
             instance.processInstanceId === processInstanceId &&
             instance.taskId === taskId
-          )
+          ),
       );
       selectedInstances = new Set(filteredSelections);
-      
-      console.log('?? Checkbox removed for:', { processInstanceId, taskId });
-      console.log('?? Remaining selections:', Array.from(selectedInstances));
+
+      console.log("?? Checkbox removed for:", { processInstanceId, taskId });
+      console.log("?? Remaining selections:", Array.from(selectedInstances));
     }
 
     toast.info("Continued with current task", 2000);
@@ -1037,8 +1058,8 @@ console.log('groupsId: ',groupIds);
       };
     }
 
-    // Check if this task supports multi-claim
-    const isMultiClaim = task.multiClaim || task.multiClaimEnabled || false;
+    const isMultiClaim =
+      task.multiClaim || task.multiClaimEnabled || isMultiClaimMember || false;
 
     // Extract process definition key for comparison
     const getProcessDefKey = (taskDefKey) => {
@@ -1051,9 +1072,9 @@ console.log('groupsId: ',groupIds);
 
     // CRITICAL FIX: Check if user has tasks with SAME taskDefinitionKey in SAME processInstanceId
     const sameInstanceSameTask = userClaimedTasks.filter(
-      (t) => 
-        t.processInstanceId === task.processInstanceId && 
-        t.taskDefinitionKey === currentTaskDefKey
+      (t) =>
+        t.processInstanceId === task.processInstanceId &&
+        t.taskDefinitionKey === currentTaskDefKey,
     );
 
     if (sameInstanceSameTask.length > 0) {
@@ -1066,9 +1087,9 @@ console.log('groupsId: ',groupIds);
 
     // Check if user has OTHER tasks in the SAME process instance (different taskDefinitionKey)
     const sameInstanceDifferentTask = userClaimedTasks.filter(
-      (t) => 
-        t.processInstanceId === task.processInstanceId && 
-        t.taskDefinitionKey !== currentTaskDefKey
+      (t) =>
+        t.processInstanceId === task.processInstanceId &&
+        t.taskDefinitionKey !== currentTaskDefKey,
     );
 
     if (sameInstanceDifferentTask.length > 0) {
@@ -1082,10 +1103,10 @@ console.log('groupsId: ',groupIds);
 
     // Check if any other user already has a task in this process instance
     const otherUserTasksInSameInstance = tasks.filter(
-      (t) => 
-        t.processInstanceId === task.processInstanceId && 
-        t.assignee && 
-        t.assignee !== userId
+      (t) =>
+        t.processInstanceId === task.processInstanceId &&
+        t.assignee &&
+        t.assignee !== userId,
     );
 
     if (otherUserTasksInSameInstance.length > 0) {
@@ -1098,9 +1119,9 @@ console.log('groupsId: ',groupIds);
 
     // Check if user has tasks with SAME taskDefinitionKey but DIFFERENT processInstanceId
     const sameTaskDifferentInstance = userClaimedTasks.filter(
-      (t) => 
-        t.taskDefinitionKey === currentTaskDefKey && 
-        t.processInstanceId !== task.processInstanceId
+      (t) =>
+        t.taskDefinitionKey === currentTaskDefKey &&
+        t.processInstanceId !== task.processInstanceId,
     );
 
     if (sameTaskDifferentInstance.length > 0) {
@@ -1121,9 +1142,9 @@ console.log('groupsId: ',groupIds);
 
     // Check if user has tasks in the same process (DIVISI.PROCESS level) but different task type
     const userTasksInSameProcess = userClaimedTasks.filter(
-      (t) => 
+      (t) =>
         getProcessDefKey(t.taskDefinitionKey) === currentProcessDefKey &&
-        t.taskDefinitionKey !== currentTaskDefKey
+        t.taskDefinitionKey !== currentTaskDefKey,
     );
 
     if (userTasksInSameProcess.length > 0) {
@@ -1138,7 +1159,7 @@ console.log('groupsId: ',groupIds);
 
     // User has tasks in different process - show modal for confirmation
     const tasksInDifferentProcess = userClaimedTasks.filter(
-      (t) => getProcessDefKey(t.taskDefinitionKey) !== currentProcessDefKey
+      (t) => getProcessDefKey(t.taskDefinitionKey) !== currentProcessDefKey,
     );
 
     if (tasksInDifferentProcess.length > 0) {
@@ -1177,13 +1198,14 @@ console.log('groupsId: ',groupIds);
     // Get the selected tasks with full details
     const selectedTasks = Array.from(selectedInstances)
       .map(({ processInstanceId, taskId }) => {
-        const task = tasks.find((t) => 
-          t.processInstanceId === processInstanceId && 
-          getTaskId(t.taskDefinitionKey) === taskId
+        const task = tasks.find(
+          (t) =>
+            t.processInstanceId === processInstanceId &&
+            getTaskId(t.taskDefinitionKey) === taskId,
         );
         return task;
       })
-      .filter(task => task !== undefined);
+      .filter((task) => task !== undefined);
 
     if (selectedTasks.length === 0) {
       alert("No tasks found matching the selected instances!");
@@ -1192,15 +1214,15 @@ console.log('groupsId: ',groupIds);
 
     // Take only the first selected task since we're simplifying
     const firstTask = selectedTasks[0];
-    
+
     // Create simplified query parameters
     const processQuery = firstTask.taskDefinitionKey;
     const instanceQuery = firstTask.processInstanceId;
 
     // Log for debugging
-    console.log('Selected Task:', firstTask);
-    console.log('Process Query:', processQuery);
-    console.log('Instance Query:', instanceQuery);
+    console.log("Selected Task:", firstTask);
+    console.log("Process Query:", processQuery);
+    console.log("Instance Query:", instanceQuery);
 
     goto(`/form?process=${processQuery}&instance=${instanceQuery}`);
   }
@@ -1208,7 +1230,7 @@ console.log('groupsId: ',groupIds);
   async function handleClaimUnclaimTask(
     processInstanceId,
     taskDefinitionKey,
-    claim
+    claim,
   ) {
     const loadingKey = `${processInstanceId}-${taskDefinitionKey}`;
     try {
@@ -1228,19 +1250,19 @@ console.log('groupsId: ',groupIds);
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       console.log(
         `Task ${claim ? "claimed" : "unclaimed"} successfully:`,
-        response.data
+        response.data,
       );
 
       // Update local state immediately for instant UI feedback
       const updateSuccessful = updateTaskAssigneeStatus(
         processInstanceId,
         taskDefinitionKey,
-        claim ? userId : null
+        claim ? userId : null,
       );
 
       // Show success notification for immediate feedback
@@ -1276,8 +1298,8 @@ console.log('groupsId: ',groupIds);
               !(
                 instance.processInstanceId === processInstanceId &&
                 instance.taskId === getTaskId(taskDefinitionKey)
-              )
-          )
+              ),
+          ),
         );
       } else {
         selectedInstances.add({
@@ -1295,10 +1317,10 @@ console.log('groupsId: ',groupIds);
   function updateTaskAssigneeStatus(
     processInstanceId,
     taskDefinitionKey,
-    assignee
+    assignee,
   ) {
     console.log(
-      `? Fast updating task: ${processInstanceId} - ${taskDefinitionKey} - ${assignee}`
+      `? Fast updating task: ${processInstanceId} - ${taskDefinitionKey} - ${assignee}`,
     );
 
     let taskUpdated = false;
@@ -1378,7 +1400,7 @@ console.log('groupsId: ',groupIds);
           !(
             instance.processInstanceId === processInstanceId &&
             instance.taskId === taskId
-          )
+          ),
       );
       if (filteredSelections.length !== currentSelections.length) {
         selectedInstances = new Set(filteredSelections);
@@ -1386,12 +1408,12 @@ console.log('groupsId: ',groupIds);
     }
 
     console.log(
-      `? Task update completed. Updated ${updatedCount} instances. Task found: ${taskUpdated}, Total tasks: ${tasks.length}`
+      `? Task update completed. Updated ${updatedCount} instances. Task found: ${taskUpdated}, Total tasks: ${tasks.length}`,
     );
 
     if (!taskUpdated || updatedCount === 0) {
       console.warn(
-        "?? Task not found for real-time update, will use fallback refresh"
+        "?? Task not found for real-time update, will use fallback refresh",
       );
       return false; // Indicate update failed
     }
@@ -1403,20 +1425,20 @@ console.log('groupsId: ',groupIds);
   async function toggleInstanceSelection(
     processInstanceId,
     taskDefinitionKey,
-    name
+    name,
   ) {
     console.log(
       "? Fast toggling instance:",
       processInstanceId,
       taskDefinitionKey,
-      name
+      name,
     );
 
     const taskId = getTaskId(taskDefinitionKey);
     const task = tasks.find(
       (t) =>
         t.processInstanceId === processInstanceId &&
-        getTaskId(t.taskDefinitionKey) === taskId
+        getTaskId(t.taskDefinitionKey) === taskId,
     );
 
     if (!task) {
@@ -1433,7 +1455,7 @@ console.log('groupsId: ',groupIds);
 
     const shouldClaim = !isTaskClaimedByCurrentUser(task);
     console.log(
-      `? ${shouldClaim ? "Claiming" : "Unclaiming"} task immediately`
+      `? ${shouldClaim ? "Claiming" : "Unclaiming"} task immediately`,
     );
 
     // If claiming, check for conflicts
@@ -1444,7 +1466,7 @@ console.log('groupsId: ',groupIds);
         const taskName = getTaskId(taskDefinitionKey);
         toast.error(
           `Cannot claim task "${taskName}": ${claimValidation.reason}`,
-          4000
+          4000,
         );
         return;
       } else if (claimValidation.showInModal) {
@@ -1454,14 +1476,14 @@ console.log('groupsId: ',groupIds);
           existingTasks: claimValidation.existingTasks,
           pendingClaim: { processInstanceId, taskDefinitionKey, name },
         };
-        
+
         // FIXED: Add to selectedInstances temporarily so checkbox appears checked during modal
         selectedInstances.add({
           processInstanceId,
-          taskId: taskId
+          taskId: taskId,
         });
         selectedInstances = new Set(selectedInstances); // Trigger reactivity
-        
+
         showTaskConflictModal = true;
         return; // Exit and wait for user decision
       }
@@ -1477,7 +1499,7 @@ console.log('groupsId: ',groupIds);
       await handleClaimUnclaimTask(
         processInstanceId,
         taskDefinitionKey,
-        shouldClaim
+        shouldClaim,
       );
 
       // Update UI selection state immediately after successful API call
@@ -1486,23 +1508,26 @@ console.log('groupsId: ',groupIds);
         const isCurrentlySelected = Array.from(selectedInstances).some(
           (instance) =>
             instance.processInstanceId === processInstanceId &&
-            instance.taskId === taskId
+            instance.taskId === taskId,
         );
 
         if (!isCurrentlySelected) {
-          // Check if task supports multi-claim
-          const isMultiClaimEnabled = task.multiClaimEnabled || false;
+          const isMultiClaimEnabled =
+            task.multiClaim ||
+            task.multiClaimEnabled ||
+            isMultiClaimMember ||
+            false;
 
           if (!isMultiClaimEnabled) {
             // Check for different task definition keys instead of names
             const currentTaskDefKey = taskDefinitionKey;
             const hasDifferentTaskTypeSelected = Array.from(
-              selectedInstances
+              selectedInstances,
             ).some((instance) => {
               const selectedTask = tasks.find(
                 (t) =>
                   t.processInstanceId === instance.processInstanceId &&
-                  getTaskId(t.taskDefinitionKey) === instance.taskId
+                  getTaskId(t.taskDefinitionKey) === instance.taskId,
               );
               return (
                 selectedTask &&
@@ -1512,7 +1537,7 @@ console.log('groupsId: ',groupIds);
 
             if (hasDifferentTaskTypeSelected) {
               console.log(
-                "Different task type selected and multi-claim disabled, clearing previous selections"
+                "Different task type selected and multi-claim disabled, clearing previous selections",
               );
               // Clear all previous selections and unclaim them
               const previousSelections = Array.from(selectedInstances);
@@ -1524,21 +1549,21 @@ console.log('groupsId: ',groupIds);
               // Background unclaim for better UX (don't wait)
               for (const prevInstance of previousSelections) {
                 const prevTask = tasks.find(
-                  (t) => t.processInstanceId === prevInstance.processInstanceId
+                  (t) => t.processInstanceId === prevInstance.processInstanceId,
                 );
                 if (prevTask && isTaskClaimedByCurrentUser(prevTask)) {
                   // Non-blocking background unclaim
                   handleClaimUnclaimTask(
                     prevInstance.processInstanceId,
                     prevTask.taskDefinitionKey,
-                    false
+                    false,
                   );
                 }
               }
             }
           } else {
             console.log(
-              "Multi-claim enabled for this task - allowing multiple selections"
+              "Multi-claim enabled for this task - allowing multiple selections",
             );
           }
 
@@ -1556,7 +1581,7 @@ console.log('groupsId: ',groupIds);
             !(
               instance.processInstanceId === processInstanceId &&
               instance.taskId === taskId
-            )
+            ),
         );
         selectedInstances = new Set(filteredSelections);
       }
@@ -1567,7 +1592,7 @@ console.log('groupsId: ',groupIds);
 
       console.log(
         "? Fast selection update completed:",
-        Array.from(selectedInstances)
+        Array.from(selectedInstances),
       );
     } catch (error) {
       console.error("? Error in toggle selection:", error);
@@ -1598,13 +1623,13 @@ console.log('groupsId: ',groupIds);
         const isSelected = Array.from(selectedInstances).some(
           (instance) =>
             instance.processInstanceId === task.processInstanceId &&
-            instance.taskId === taskId
+            instance.taskId === taskId,
         );
         if (isSelected && isTaskClaimedByCurrentUser(task)) {
           await handleClaimUnclaimTask(
             task.processInstanceId,
             task.taskDefinitionKey,
-            false
+            false,
           );
           selectedInstances = new Set(
             Array.from(selectedInstances).filter(
@@ -1612,8 +1637,8 @@ console.log('groupsId: ',groupIds);
                 !(
                   instance.processInstanceId === task.processInstanceId &&
                   instance.taskId === taskId
-                )
-            )
+                ),
+            ),
           );
         }
       }
@@ -1624,13 +1649,13 @@ console.log('groupsId: ',groupIds);
         const isSelected = Array.from(selectedInstances).some(
           (instance) =>
             instance.processInstanceId === task.processInstanceId &&
-            instance.taskId === taskId
+            instance.taskId === taskId,
         );
         if (!isSelected && !isTaskClaimedByOthers(task)) {
           await handleClaimUnclaimTask(
             task.processInstanceId,
             task.taskDefinitionKey,
-            true
+            true,
           );
           selectedInstances.add({
             processInstanceId: task.processInstanceId,
@@ -1652,7 +1677,7 @@ console.log('groupsId: ',groupIds);
     const taskId = getTaskId(taskDefinitionKey);
     const groupTasks = getTasksForGroup(taskDefinitionKey);
     const availableTasks = groupTasks.filter(
-      (task) => !isTaskClaimedByOthers(task)
+      (task) => !isTaskClaimedByOthers(task),
     );
 
     if (availableTasks.length === 0) {
@@ -1664,8 +1689,8 @@ console.log('groupsId: ',groupIds);
       Array.from(selectedInstances).some(
         (instance) =>
           instance.processInstanceId === task.processInstanceId &&
-          instance.taskId === taskId
-      )
+          instance.taskId === taskId,
+      ),
     );
 
     groupSelectAllStates[taskDefinitionKey] =
@@ -1864,7 +1889,7 @@ console.log('groupsId: ',groupIds);
 
     filterValues = cleanedValues;
     isFilterActive = Object.values(filterValues).some(
-      (val) => val && val.length > 0
+      (val) => val && val.length > 0,
     );
 
     // Save filter values to localStorage for caching
@@ -1932,13 +1957,13 @@ console.log('groupsId: ',groupIds);
     if (typeof window !== "undefined") {
       console.log(
         "Reactive update - groupedTasks keys:",
-        Object.keys(groupedTasks)
+        Object.keys(groupedTasks),
       );
       console.log("Reactive update - tasks count:", tasks.length);
       console.log("Reactive update - isFilterActive:", isFilterActive);
       console.log(
         "Reactive update - filteredGroupedTasks keys:",
-        Object.keys(filteredGroupedTasks)
+        Object.keys(filteredGroupedTasks),
       );
     }
   }
@@ -1948,14 +1973,14 @@ console.log('groupsId: ',groupIds);
     if (!taskId) return false;
     const normalized = taskId.trim().toLowerCase().replace(/_/g, " ");
     const allTasks = flattenTasks(
-      isFilterActive ? filteredGroupedTasks : groupedTasks
+      isFilterActive ? filteredGroupedTasks : groupedTasks,
     );
     const count = allTasks.filter(
       (t) =>
         getTaskId(t.taskDefinitionKey)
           .trim()
           .toLowerCase()
-          .replace(/_/g, " ") === normalized
+          .replace(/_/g, " ") === normalized,
     ).length;
     // Tampilkan total hanya jika ada lebih dari 1 task dengan nama yang sama
     return count > 0;
@@ -1968,42 +1993,42 @@ console.log('groupsId: ',groupIds);
       class="flex flex-col items-center justify-center p-8 bg-white rounded-lg shadow-sm"
     >
       <div
-        class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"
+        class="w-12 h-12 mb-4 border-b-2 border-blue-500 rounded-full animate-spin"
       ></div>
 
       {#if loadingStage}
-        <p class="text-blue-600 text-lg font-semibold">{loadingStage}</p>
+        <p class="text-lg font-semibold text-blue-600">{loadingStage}</p>
       {:else}
-        <p class="text-blue-500 text-lg font-semibold">Loading tasks...</p>
+        <p class="text-lg font-semibold text-blue-500">Loading tasks...</p>
       {/if}
 
       {#if totalGroups > 0}
         <div class="w-full max-w-xs mt-4">
-          <div class="bg-gray-200 rounded-full h-2">
+          <div class="h-2 bg-gray-200 rounded-full">
             <div
-              class="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              class="h-2 transition-all duration-300 bg-blue-500 rounded-full"
               style="width: {(loadedGroups / totalGroups) * 100}%"
             ></div>
           </div>
-          <p class="text-sm text-gray-600 mt-2 text-center">
+          <p class="mt-2 text-sm text-center text-gray-600">
             Processing {loadedGroups}/{totalGroups} groups
           </p>
         </div>
       {/if}
     </div>
   {:else if error}
-    <p class="text-red-500 text-lg font-semibold p-4">Error: {error}</p>
+    <p class="p-4 text-lg font-semibold text-red-500">Error: {error}</p>
   {:else}
     <!-- Action buttons -->
-    <div class="mb-4 flex flex-wrap gap-2">
+    <div class="flex flex-wrap gap-2 mb-4">
       <button
-        class="px-4 py-2 bg-gray-500 text-white text-sm font-semibold rounded hover:bg-gray-600"
+        class="px-4 py-2 text-sm font-semibold text-white bg-gray-500 rounded hover:bg-gray-600"
         on:click={resetCheckbox}
       >
         Reset
       </button>
       <button
-        class="px-4 py-2 bg-myPrimary text-white text-sm font-semibold rounded hover:bg-blue-950"
+        class="px-4 py-2 text-sm font-semibold text-white rounded bg-myPrimary hover:bg-blue-950"
         on:click={handleSubmit}
       >
         Process
@@ -2011,12 +2036,12 @@ console.log('groupsId: ',groupIds);
       <!-- Dynamic QR Scan Buttons based on user groups -->
       {#if showScanQRButton}
         <button
-          class="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded hover:bg-green-700 flex items-center justify-center gap-2"
+          class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded hover:bg-green-700"
           on:click={handleScanQR}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4"
+            class="w-4 h-4"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -2034,12 +2059,12 @@ console.log('groupsId: ',groupIds);
 
       {#if showScanQRInternalButton}
         <button
-          class="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded hover:bg-green-700 flex items-center justify-center gap-2"
+          class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded hover:bg-green-700"
           on:click={handleScanQRInternal}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4"
+            class="w-4 h-4"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -2057,12 +2082,12 @@ console.log('groupsId: ',groupIds);
 
       <!-- Filter Button -->
       <button
-        class="px-4 py-2 bg-yellow-500 text-white text-sm font-semibold rounded hover:bg-yellow-600 flex items-center gap-2"
+        class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-yellow-500 rounded hover:bg-yellow-600"
         on:click={() => (showFilter = !showFilter)}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          class="h-4 w-4"
+          class="w-4 h-4"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -2079,21 +2104,21 @@ console.log('groupsId: ',groupIds);
     </div>
 
     <!-- Table -->
-    <div class="overflow-x-auto -mx-4 md:mx-0">
+    <div class="-mx-4 overflow-x-auto md:mx-0">
       <table
-        class="w-full border border-gray-300 bg-white rounded-lg shadow-lg text-sm md:text-base"
+        class="w-full text-sm bg-white border border-gray-300 rounded-lg shadow-lg md:text-base"
       >
-        <thead class="bg-myPrimary text-white">
+        <thead class="text-white bg-myPrimary">
           <tr>
-            <th class="text-left px-3 py-2 font-medium text-white"
+            <th class="px-3 py-2 font-medium text-left text-white"
               >Task Definition</th
             >
-            <th class="text-center w-16 px-2 py-2 font-medium text-white"
+            <th class="w-16 px-2 py-2 font-medium text-center text-white"
               >Action</th
             >
-            <th class="text-left px-3 py-2 font-medium text-white">Status</th>
+            <th class="px-3 py-2 font-medium text-left text-white">Status</th>
             <th
-              class="text-left px-3 py-2 font-medium text-white cursor-pointer"
+              class="px-3 py-2 font-medium text-left text-white cursor-pointer"
               on:click={() => toggleSort("created")}
             >
               <div class="flex items-center">
@@ -2105,7 +2130,7 @@ console.log('groupsId: ',groupIds);
               </div>
             </th>
             <th
-              class="text-left px-3 py-2 font-medium text-white cursor-pointer"
+              class="px-3 py-2 font-medium text-left text-white cursor-pointer"
               on:click={() => toggleSort("businessKey1")}
             >
               <div class="flex items-center">
@@ -2117,7 +2142,7 @@ console.log('groupsId: ',groupIds);
               </div>
             </th>
             <th
-              class="text-left px-3 py-2 font-medium text-white cursor-pointer"
+              class="px-3 py-2 font-medium text-left text-white cursor-pointer"
               on:click={() => toggleSort("businessKey2")}
             >
               <div class="flex items-center">
@@ -2129,7 +2154,7 @@ console.log('groupsId: ',groupIds);
               </div>
             </th>
             <th
-              class="text-left px-3 py-2 font-medium text-white cursor-pointer"
+              class="px-3 py-2 font-medium text-left text-white cursor-pointer"
               on:click={() => toggleSort("businessKey3")}
             >
               <div class="flex items-center">
@@ -2141,7 +2166,7 @@ console.log('groupsId: ',groupIds);
               </div>
             </th>
             <th
-              class="text-left px-3 py-2 font-medium text-white cursor-pointer"
+              class="px-3 py-2 font-medium text-left text-white cursor-pointer"
               on:click={() => toggleSort("business_key")}
             >
               <div class="flex items-center">
@@ -2153,12 +2178,11 @@ console.log('groupsId: ',groupIds);
               </div>
             </th>
             <th
-              class="text-left px-3 py-2 font-medium text-white cursor-pointer"
+              class="px-3 py-2 font-medium text-left text-white cursor-pointer"
               on:click={() => toggleSort("created")}
             >
-        
             </th>
-            <th class="text-center w-16 px-2 py-2 font-medium text-white"
+            <th class="w-16 px-2 py-2 font-medium text-center text-white"
               >Delegated</th
             >
           </tr>
@@ -2174,39 +2198,44 @@ console.log('groupsId: ',groupIds);
                   : ''}"
               >
                 <td
-                  class="px-3 py-2 text-xs md:text-sm text-gray-700 cursor-pointer flex items-center"
+                  class="flex items-center px-3 py-2 text-xs text-gray-700 cursor-pointer md:text-sm"
                   style="margin-left: {row.indent * 1}rem;"
                   on:click={() => toggleCollapse(row.taskDefinitionKey)}
                 >
                   {#if row.isGroup}
-                    <p class="mr-2 text-black font-bold text-xs">
+                    <p class="mr-2 text-xs font-bold text-black">
                       {collapsed[row.taskDefinitionKey] ? "?" : "?"}
                     </p>
                     <span class="truncate"
                       >{row.taskId}
                       {#if row.isGroup && row.taskId && shouldShowTotalForGroup(row.taskId)}
-                        <span class="ml-1 text-xs text-blue-600 font-bold">
+                        <span class="ml-1 text-xs font-bold text-blue-600">
                           ({flattenTasks(
-                            isFilterActive ? filteredGroupedTasks : groupedTasks
+                            isFilterActive
+                              ? filteredGroupedTasks
+                              : groupedTasks,
                           ).filter(
                             (t) =>
                               getTaskId(t.taskDefinitionKey)
                                 .trim()
                                 .toLowerCase()
                                 .replace(/_/g, " ") ===
-                              row.taskId.trim().toLowerCase().replace(/_/g, " ")
+                              row.taskId
+                                .trim()
+                                .toLowerCase()
+                                .replace(/_/g, " "),
                           ).length})
                         </span>
                       {/if}
                     </span>
                     {#if countHighPriorityTasks((isFilterActive ? filteredGroupedTasks : groupedTasks)[row.taskDefinitionKey]) > 0}
                       <span
-                        class="ml-2 px-2 py-1 bg-red-500 text-white text-xs rounded-full"
+                        class="px-2 py-1 ml-2 text-xs text-white bg-red-500 rounded-full"
                       >
                         {countHighPriorityTasks(
                           (isFilterActive
                             ? filteredGroupedTasks
-                            : groupedTasks)[row.taskDefinitionKey]
+                            : groupedTasks)[row.taskDefinitionKey],
                         )} instant
                       </span>
                     {/if}
@@ -2227,7 +2256,7 @@ console.log('groupsId: ',groupIds);
                           )}
                         title="Select/Unselect all tasks in this group"
                       />
-                      <span class="ml-1 text-xs text-gray-600 hidden sm:inline">
+                      <span class="hidden ml-1 text-xs text-gray-600 sm:inline">
                         All
                       </span> -->
                     </div>
@@ -2235,7 +2264,7 @@ console.log('groupsId: ',groupIds);
                     <!-- Individual Task Checkbox -->
                     {#if claimLoadingStates[`${row.processInstanceId}-${row.taskDefinitionKey}`]}
                       <div
-                        class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-myPrimary"
+                        class="inline-block w-4 h-4 border-b-2 rounded-full animate-spin border-myPrimary"
                       ></div>
                     {:else if isTaskClaimedByOthers(row)}
                       <input
@@ -2262,40 +2291,46 @@ console.log('groupsId: ',groupIds);
                           (instance) =>
                             instance.processInstanceId ===
                               row.processInstanceId &&
-                            instance.taskId === row.taskId
+                            instance.taskId === row.taskId,
                         )}
                         on:change={() =>
                           toggleInstanceSelection(
                             row.processInstanceId,
                             row.taskDefinitionKey,
-                            row.name
+                            row.name,
                           )}
                       />
                     {/if}
                   {/if}
                 </td>
-                <td class="px-2 py-2 text-xs md:text-sm text-center">
-  {#if !row.isGroup && row.processInstanceId}
-    <div class="flex flex-col items-center justify-center gap-1">
-      {#if isTaskClaimedByCurrentUser(row)}
-        <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-          Claimed by You
-        </span>
-      {:else if isTaskClaimedByOthers(row)}
-        <span class="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-          Claimed by {row.assignee}
-        </span>
-      {:else}
-        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-          Available
-        </span>
-      {/if}
-    </div>
-  {/if}
-</td>
-                <td
-                  class="px-3 py-2 text-xs md:text-sm text-gray-700"
-                >
+                <td class="px-2 py-2 text-xs text-center md:text-sm">
+                  {#if !row.isGroup && row.processInstanceId}
+                    <div
+                      class="flex flex-col items-center justify-center gap-1"
+                    >
+                      {#if isTaskClaimedByCurrentUser(row)}
+                        <span
+                          class="px-2 py-1 text-xs text-green-800 bg-green-100 rounded-full"
+                        >
+                          Claimed by You
+                        </span>
+                      {:else if isTaskClaimedByOthers(row)}
+                        <span
+                          class="px-2 py-1 text-xs text-red-800 bg-red-100 rounded-full"
+                        >
+                          Claimed by {row.assignee}
+                        </span>
+                      {:else}
+                        <span
+                          class="px-2 py-1 text-xs text-blue-800 bg-blue-100 rounded-full"
+                        >
+                          Available
+                        </span>
+                      {/if}
+                    </div>
+                  {/if}
+                </td>
+                <td class="px-3 py-2 text-xs text-gray-700 md:text-sm">
                   {#if !row.isGroup && row.created}
                     {formatDateOnly(row.created)}
                   {/if}
@@ -2317,17 +2352,17 @@ console.log('groupsId: ',groupIds);
                   {row.businessKey3}
                 </td>
                 <td
-                    class="px-3 py-2 text-xs md:text-sm text-gray-700 max-w-[250px] business-key-content"
-                  >
-                    {#if row.business_key}
-                      {#if row.business_key.includes(":")}
-                        {#each row.business_key.split(":") as line}
-                          <div>{line}</div>
-                        {/each}
-                      {:else}
-                        <div>{row.business_key}</div>
-                      {/if}
+                  class="px-3 py-2 text-xs md:text-sm text-gray-700 max-w-[250px] business-key-content"
+                >
+                  {#if row.business_key}
+                    {#if row.business_key.includes(":")}
+                      {#each row.business_key.split(":") as line}
+                        <div>{line}</div>
+                      {/each}
+                    {:else}
+                      <div>{row.business_key}</div>
                     {/if}
+                  {/if}
                 </td>
                 <td
                   class="px-3 py-2 text-xs md:text-sm text-gray-700 text-wrap break-words max-w-[250px] delegated-content"
@@ -2350,16 +2385,16 @@ console.log('groupsId: ',groupIds);
 <!-- Task Conflict Modal -->
 {#if showTaskConflictModal}
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
     style="z-index: 20;"
   >
     <div
-      class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-2xl relative"
+      class="relative max-w-md p-6 mx-4 bg-white rounded-lg shadow-2xl"
       style="z-index: 21;"
     >
       <div class="text-center">
         <svg
-          class="mx-auto mb-4 w-12 h-12 text-amber-500"
+          class="w-12 h-12 mx-auto mb-4 text-amber-500"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -2371,7 +2406,7 @@ console.log('groupsId: ',groupIds);
             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"
           ></path>
         </svg>
-        <h3 class="text-lg font-semibold text-gray-900 mb-2">
+        <h3 class="mb-2 text-lg font-semibold text-gray-900">
           Task Conflict Detected
         </h3>
         {#if conflictModalData.newTask && conflictModalData.existingTasks.length > 0}
@@ -2380,26 +2415,26 @@ console.log('groupsId: ',groupIds);
             return parts.length >= 2 ? `${parts[0]}.${parts[1]}` : taskDefKey;
           }}
           {@const newTaskProcess = getProcessDefKey(
-            conflictModalData.newTask.taskDefinitionKey
+            conflictModalData.newTask.taskDefinitionKey,
           )}
           {@const existingTaskProcess = getProcessDefKey(
-            conflictModalData.existingTasks[0].taskDefinitionKey
+            conflictModalData.existingTasks[0].taskDefinitionKey,
           )}
           {@const isSameProcess = newTaskProcess === existingTaskProcess}
 
           {#if isSameProcess}
-            <p class="text-sm text-gray-600 mb-4">
+            <p class="mb-4 text-sm text-gray-600">
               You already have claimed task(s) in the same process. Only one
               task per process is allowed for non-multi-claim tasks.
             </p>
           {:else}
-            <p class="text-sm text-gray-600 mb-4">
+            <p class="mb-4 text-sm text-gray-600">
               You already have claimed task(s) in a different process. Do you
               want to switch to this new task?
             </p>
           {/if}
         {:else}
-          <p class="text-sm text-gray-600 mb-4">
+          <p class="mb-4 text-sm text-gray-600">
             You already have claimed task(s). Do you want to switch to this new
             task?
           </p>
@@ -2407,8 +2442,8 @@ console.log('groupsId: ',groupIds);
 
         <!-- Current task info -->
         {#if conflictModalData.newTask}
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-            <p class="text-sm font-medium text-blue-800 mb-1">
+          <div class="p-3 mb-4 border border-blue-200 rounded-lg bg-blue-50">
+            <p class="mb-1 text-sm font-medium text-blue-800">
               New Task to Claim:
             </p>
             <p class="text-sm text-blue-700">
@@ -2422,14 +2457,14 @@ console.log('groupsId: ',groupIds);
 
         <!-- Existing tasks info -->
         {#if conflictModalData.existingTasks.length > 0}
-          <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-            <p class="text-sm font-medium text-red-800 mb-2">
+          <div class="p-3 mb-4 border border-red-200 rounded-lg bg-red-50">
+            <p class="mb-2 text-sm font-medium text-red-800">
               Currently Claimed Tasks:
             </p>
             {#each conflictModalData.existingTasks as existingTask}
-              <div class="text-sm text-red-700 mb-1">
-                • {getTaskId(existingTask.taskDefinitionKey)}
-                <span class="text-xs text-red-600 block ml-2"
+              <div class="mb-1 text-sm text-red-700">
+                ï¿½ {getTaskId(existingTask.taskDefinitionKey)}
+                <span class="block ml-2 text-xs text-red-600"
                   >Instance: {existingTask.processInstanceId}</span
                 >
               </div>
@@ -2437,20 +2472,20 @@ console.log('groupsId: ',groupIds);
           </div>
         {/if}
 
-        <p class="text-sm text-gray-600 mb-6">
+        <p class="mb-6 text-sm text-gray-600">
           Choose your action: unclaim current task(s) and claim the new one, or
           continue with your current task(s).
         </p>
 
-        <div class="flex gap-3 justify-center">
+        <div class="flex justify-center gap-3">
           <button
-            class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 transition-colors"
+            class="px-4 py-2 text-sm font-semibold text-white transition-colors bg-blue-600 rounded hover:bg-blue-700"
             on:click={handleUnclaimExistingTasks}
           >
             Switch to New Task
           </button>
           <button
-            class="px-4 py-2 bg-gray-500 text-white text-sm font-semibold rounded hover:bg-gray-600 transition-colors"
+            class="px-4 py-2 text-sm font-semibold text-white transition-colors bg-gray-500 rounded hover:bg-gray-600"
             on:click={cancelNewTaskClaim}
           >
             Continue Current Task
@@ -2464,37 +2499,51 @@ console.log('groupsId: ',groupIds);
 <!-- Scan Conflict Modal: shown when user tries to scan but has claimed tasks -->
 {#if showScanConflictModal}
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
     style="z-index: 20;"
   >
     <div
-      class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-2xl relative"
+      class="relative max-w-md p-6 mx-4 bg-white rounded-lg shadow-2xl"
       style="z-index: 21;"
     >
       <div class="text-center">
-        <h3 class="text-lg font-bold mb-2 text-gray-900">You have active claimed task(s)</h3>
-        <p class="text-sm text-gray-700 mb-4">You currently have <strong>{scanConflictTasks.length}</strong> claimed task(s). You can continue working on them, or unclaim them and switch to the scanner.</p>
+        <h3 class="mb-2 text-lg font-bold text-gray-900">
+          You have active claimed task(s)
+        </h3>
+        <p class="mb-4 text-sm text-gray-700">
+          You currently have <strong>{scanConflictTasks.length}</strong> claimed
+          task(s). You can continue working on them, or unclaim them and switch to
+          the scanner.
+        </p>
 
-        <div class="mb-4 max-h-40 overflow-auto text-left text-sm text-gray-700 border rounded p-2">
+        <div
+          class="p-2 mb-4 overflow-auto text-sm text-left text-gray-700 border rounded max-h-40"
+        >
           <ul>
-            {#each scanConflictTasks as t (t.processInstanceId + '::' + t.taskDefinitionKey)}
+            {#each scanConflictTasks as t (t.processInstanceId + "::" + t.taskDefinitionKey)}
               <li class="py-1 border-b last:border-b-0">
                 <strong>{getTaskId(t.taskDefinitionKey)}</strong>
-                <div class="text-xs text-gray-500">Instance: {t.processInstanceId} · Assignee: {t.assignee}</div>
+                <div class="text-xs text-gray-500">
+                  Instance: {t.processInstanceId} ï¿½ Assignee: {t.assignee}
+                </div>
               </li>
             {/each}
           </ul>
         </div>
 
-        <div class="flex gap-2 justify-end">
+        <div class="flex justify-end gap-2">
           <button
-            class="px-4 py-2 rounded bg-gray-200 text-gray-800"
-            on:click={() => { showScanConflictModal = false; scanConflictTasks = []; scanTargetRoute = ''; }}
+            class="px-4 py-2 text-gray-800 bg-gray-200 rounded"
+            on:click={() => {
+              showScanConflictModal = false;
+              scanConflictTasks = [];
+              scanTargetRoute = "";
+            }}
           >
             Continue current tasks
           </button>
           <button
-            class="px-4 py-2 rounded bg-blue-600 text-white"
+            class="px-4 py-2 text-white bg-blue-600 rounded"
             on:click={performUnclaimAndNavigate}
             disabled={scanUnclaimLoading}
           >
@@ -2513,27 +2562,27 @@ console.log('groupsId: ',groupIds);
 <!-- Filter Modal -->
 {#if showFilter}
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
     style="z-index: 50;"
     role="dialog"
     aria-modal="true"
     aria-label="Filter Tasks Modal"
   >
     <div
-      class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl relative"
+      class="relative w-full max-w-md p-6 mx-4 bg-white rounded-lg shadow-2xl"
       style="z-index: 51;"
       role="document"
     >
       <!-- Close Button -->
       <button
         type="button"
-        class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+        class="absolute text-gray-400 top-4 right-4 hover:text-gray-600"
         aria-label="Close filter modal"
         on:click={() => (showFilter = false)}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6"
+          class="w-6 h-6"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -2547,20 +2596,20 @@ console.log('groupsId: ',groupIds);
         </svg>
       </button>
 
-      <h3 class="text-lg font-bold mb-4 text-gray-900">Filter Tasks</h3>
-      
+      <h3 class="mb-4 text-lg font-bold text-gray-900">Filter Tasks</h3>
+
       <div class="space-y-4">
         {#each filterColumns as col, i}
           <div>
             <label
-              class="block text-sm font-semibold mb-2 text-gray-700"
+              class="block mb-2 text-sm font-semibold text-gray-700"
               for="filter-{col.key}">{col.label}</label
             >
             {#if col.key === "taskId"}
               <!-- For taskId, show a select dropdown with all unique taskIds -->
               <select
                 id="filter-{col.key}"
-                class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 bind:value={tempFilterValues[col.key]}
               >
                 <option value="">All Task Definitions</option>
@@ -2571,7 +2620,7 @@ console.log('groupsId: ',groupIds);
             {:else}
               <input
                 id="filter-{col.key}"
-                class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 type="text"
                 bind:value={tempFilterValues[col.key]}
                 placeholder="Filter by {col.label}"
@@ -2582,7 +2631,9 @@ console.log('groupsId: ',groupIds);
       </div>
 
       {#if isFilterActive}
-        <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-700 font-medium">
+        <div
+          class="p-3 mt-4 text-sm font-medium text-green-700 border border-green-200 rounded bg-green-50"
+        >
           Filter active
         </div>
       {/if}
@@ -2590,21 +2641,21 @@ console.log('groupsId: ',groupIds);
       <div class="flex gap-2 mt-6">
         <button
           type="button"
-          class="flex-1 px-4 py-2 bg-blue-500 text-white rounded font-semibold hover:bg-blue-600 transition-colors"
+          class="flex-1 px-4 py-2 font-semibold text-white transition-colors bg-blue-500 rounded hover:bg-blue-600"
           on:click={submitFilter}
         >
           Apply Filter
         </button>
         <button
           type="button"
-          class="px-4 py-2 bg-gray-300 text-gray-700 rounded font-semibold hover:bg-gray-400 transition-colors"
+          class="px-4 py-2 font-semibold text-gray-700 transition-colors bg-gray-300 rounded hover:bg-gray-400"
           on:click={resetFilter}
         >
           Reset
         </button>
         <button
           type="button"
-          class="px-4 py-2 bg-red-400 text-white rounded font-semibold hover:bg-red-500 transition-colors"
+          class="px-4 py-2 font-semibold text-white transition-colors bg-red-400 rounded hover:bg-red-500"
           on:click={cancelFilter}
         >
           Cancel
@@ -2617,16 +2668,16 @@ console.log('groupsId: ',groupIds);
 <!-- No Data Modal -->
 {#if showNoDataModal}
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
     style="z-index: 9;"
   >
     <div
-      class="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-2xl relative"
+      class="relative max-w-sm p-6 mx-4 bg-white rounded-lg shadow-2xl"
       style="z-index: 10;"
     >
       <div class="text-center">
         <svg
-          class="mx-auto mb-4 w-12 h-12 text-gray-400"
+          class="w-12 h-12 mx-auto mb-4 text-gray-400"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -2638,26 +2689,26 @@ console.log('groupsId: ',groupIds);
             d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m13-8L9 5"
           ></path>
         </svg>
-        <h3 class="text-lg font-semibold text-gray-900 mb-2">
+        <h3 class="mb-2 text-lg font-semibold text-gray-900">
           Data Tidak Ditemukan
         </h3>
-        <p class="text-sm text-gray-600 mb-4">
+        <p class="mb-4 text-sm text-gray-600">
           {#if isFilterActive}
             Tidak ada task yang sesuai dengan filter yang diterapkan.
           {:else}
             Tidak ada task yang tersedia untuk grup Anda saat ini.
           {/if}
         </p>
-        <div class="flex gap-2 justify-center">
+        <div class="flex justify-center gap-2">
           <button
-            class="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300"
             on:click={closeNoDataModal}
           >
             OK
           </button>
           {#if isFilterActive}
             <button
-              class="px-4 py-2 bg-gray-500 text-white text-sm font-medium rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
+              class="px-4 py-2 text-sm font-medium text-white bg-gray-500 rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
               on:click={() => {
                 resetFilter();
                 closeNoDataModal();
