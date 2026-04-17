@@ -7,176 +7,6 @@
   import { writable } from "svelte/store";
   import { Form } from "@formio/js";
 
-  // IndexedDB utility class for form autosave
-  class FormAutosaveDB {
-    constructor(dbName = 'FormAutosave', version = 1) {
-      this.dbName = dbName;
-      this.version = version;
-      this.storeName = 'autosave';
-      this.db = null;
-    }
-
-    async init() {
-      if (typeof window === 'undefined' || !window.indexedDB) {
-        throw new Error('IndexedDB not available');
-      }
-      
-      return new Promise((resolve, reject) => {
-        const request = window.indexedDB.open(this.dbName, this.version);
-        
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-          this.db = request.result;
-          resolve(this.db);
-        };
-        
-        request.onupgradeneeded = (event) => {
-          const db = event.target.result;
-          if (!db.objectStoreNames.contains(this.storeName)) {
-            const store = db.createObjectStore(this.storeName, { keyPath: 'key' });
-            store.createIndex('timestamp', 'timestamp', { unique: false });
-          }
-        };
-      });
-    }
-
-    async ensureDB() {
-      if (!this.db) {
-        await this.init();
-      }
-      return this.db;
-    }
-
-    async save(key, data) {
-      try {
-        await this.ensureDB();
-        const transaction = this.db.transaction([this.storeName], 'readwrite');
-        const store = transaction.objectStore(this.storeName);
-        
-        const record = {
-          key,
-          data,
-          timestamp: Date.now()
-        };
-        
-        return new Promise((resolve, reject) => {
-          const request = store.put(record);
-          request.onsuccess = () => resolve(request.result);
-          request.onerror = () => reject(request.error);
-        });
-      } catch (error) {
-        console.warn('IndexedDB save failed:', error);
-        throw error;
-      }
-    }
-
-    async load(key) {
-      try {
-        await this.ensureDB();
-        const transaction = this.db.transaction([this.storeName], 'readonly');
-        const store = transaction.objectStore(this.storeName);
-        
-        return new Promise((resolve, reject) => {
-          const request = store.get(key);
-          request.onsuccess = () => {
-            const result = request.result;
-            resolve(result ? result.data : null);
-          };
-          request.onerror = () => reject(request.error);
-        });
-      } catch (error) {
-        console.warn('IndexedDB load failed:', error);
-        return null;
-      }
-    }
-
-    async remove(key) {
-      try {
-        await this.ensureDB();
-        const transaction = this.db.transaction([this.storeName], 'readwrite');
-        const store = transaction.objectStore(this.storeName);
-        
-        return new Promise((resolve, reject) => {
-          const request = store.delete(key);
-          request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-        });
-      } catch (error) {
-        console.warn('IndexedDB remove failed:', error);
-        throw error;
-      }
-    }
-
-    async clear() {
-      try {
-        await this.ensureDB();
-        const transaction = this.db.transaction([this.storeName], 'readwrite');
-        const store = transaction.objectStore(this.storeName);
-        
-        return new Promise((resolve, reject) => {
-          const request = store.clear();
-          request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-        });
-      } catch (error) {
-        console.warn('IndexedDB clear failed:', error);
-        throw error;
-      }
-    }
-  }
-
-  // Initialize IndexedDB instance
-  const formDB = new FormAutosaveDB();
-  let isDBInitialized = false;
-  let isDBAvailable = false;
-
-  // Check if IndexedDB is available and working
-  async function checkIndexedDBAvailability() {
-    try {
-      if (typeof window === 'undefined' || !window.indexedDB) {
-        return false;
-      }
-      
-      // Test if we can actually create a database
-      const testDB = window.indexedDB.open('__test_db__', 1);
-      return new Promise((resolve) => {
-        testDB.onsuccess = () => {
-          testDB.result.close();
-          window.indexedDB.deleteDatabase('__test_db__');
-          resolve(true);
-        };
-        testDB.onerror = () => resolve(false);
-        testDB.onblocked = () => resolve(false);
-      });
-    } catch (error) {
-      console.warn('IndexedDB availability check failed:', error);
-      return false;
-    }
-  }
-
-  // Migrate data from localStorage to IndexedDB for existing users
-  async function migrateFromLocalStorage() {
-    if (!isDBAvailable || typeof window === 'undefined' || !window.localStorage) {
-      return;
-    }
-    
-    try {
-      const key = getAutosaveKey();
-      const localData = window.localStorage.getItem(key);
-      
-      if (localData) {
-        const parsed = JSON.parse(localData);
-        await formDB.save(key, parsed);
-        console.log('Successfully migrated autosave data from localStorage to IndexedDB');
-        
-        // Optionally remove from localStorage after successful migration
-        // window.localStorage.removeItem(key);
-      }
-    } catch (error) {
-      console.warn('Failed to migrate data from localStorage to IndexedDB:', error);
-    }
-  }
-
   export let dynamicParams = {};
 
   const formData = writable(dynamicParams); // untuk menyimpan data form yang terkini
@@ -213,13 +43,11 @@
     postSubmissionColor === "red" ||
     postSubmissionColor === "yellow"
   ) {
-    (async () => {
-      try {
-        await clearIndexedDB();
-      } catch (e) {
-        console.warn("Failed to clear autosave (reactive):", e);
-      }
-    })();
+    try {
+      clearLocalStorage();
+    } catch (e) {
+      console.warn("Failed to clear autosave (reactive):", e);
+    }
   }
 
   function isSuccessResponse(response) {
@@ -629,29 +457,10 @@
         const now = new Date();
         const wibTime = new Date(now.getTime() + 7 * 60 * 60 * 1000);
         const date = wibTime.toISOString().replace("T", " ").split(".")[0];
-        if (submissionData.kegiatan == "delegasi"){
-          if (submissionData.aksi == "delegasiSaja"){
-            return {
-              message: `Delegasi Saja berhasil role <br> ${submissionData.cnFromDn} <br> ke user ${submissionData.delegasiUser}`,
-              color: "green",
-            };
-          } else if (submissionData.aksi == "delegasiDanClockout"){
-            return {
-              message: `Delegasi dan clockout berhasil role <br> ${submissionData.cnFromDn} <br> ke user ${submissionData.delegasiUser} <br> Clock Out pada waktu ${date}`,
-              color: "green",
-            };
-          }
-        }else if (submissionData.kegiatan == "clockOut") {
-          return {
-            message: "Clock Out Berhasil di Waktu<br>" + date,
-            color: "green",
-          };
-        }else if (submissionData.kegiatan == "rollback") {
-          return {
-            message: "Kembalikan Deligasi Berhasil",
-            color: "green",
-          };
-        }
+        return {
+          message: "Clock Out Berhasil di Waktu<br>" + date,
+          color: "green",
+        };
       },
     },
     "HR_Management.Absensi_New.ClockIn": {
@@ -779,13 +588,11 @@
       postSubmissionColor === "red" ||
       postSubmissionColor === "yellow"
     ) {
-      (async () => {
-        try {
-          await clearIndexedDB();
-        } catch (e) {
-          console.warn("Failed to clear autosave:", e);
-        }
-      })();
+      try {
+        clearLocalStorage();
+      } catch (e) {
+        console.warn("Failed to clear autosave:", e);
+      }
     }
 
     showPostSubmissionModal = true;
@@ -952,14 +759,9 @@
       if (isSuccessResponse(submitResponse)) {
         showPostSubmissionModalWithMessage(submissionData);
       } else {
-              console.log("Error response detected:", submitResponse);
-              const errorMsg =
-                submitResponse?.error ||
-                submitResponse?.data?.error ||
-                "Gagal memproses data";
-              postSubmissionMessage = errorMsg;
-              postSubmissionColor = "red";
-              showPostSubmissionModal = true;
+        postSubmissionMessage = submitResponse?.error || "Gagal memproses data";
+        postSubmissionColor = "red";
+        showPostSubmissionModal = true;
       }
     } catch (error) {
       hideLoaderPopup();
@@ -1575,17 +1377,18 @@
     window.smartMergeTest = smartMerge;
   }
 
-  async function saveToIndexedDB(data, formInstance = null) {
+  function saveToLocalStorage(data, formInstance = null) {
     try {
-      if (typeof window === "undefined") return;
+      if (typeof window === "undefined" || !window.localStorage) return;
       const key = getAutosaveKey();
 
       // Load existing saved draft (if any) and merge with incoming partial data
       let existing = {};
       try {
-        existing = (await formDB.load(key)) || {};
+        const raw = window.localStorage.getItem(key);
+        if (raw) existing = JSON.parse(raw) || {};
       } catch (e) {
-        console.warn("Failed to load existing autosave, starting fresh:", e);
+        console.warn("Failed to parse existing autosave, starting fresh:", e);
         existing = {};
       }
 
@@ -1595,58 +1398,20 @@
       const sanitized = sanitizeForStorage(merged, formInstance);
       if (!sanitized) return;
 
-      await formDB.save(key, sanitized);
-      console.log('Autosave saved to IndexedDB successfully');
+      window.localStorage.setItem(key, JSON.stringify(sanitized));
     } catch (err) {
-      console.warn("Failed to save autosave to IndexedDB:", err);
-      // Fallback to localStorage
-      try {
-        if (window.localStorage) {
-          const key = getAutosaveKey();
-          let existing = {};
-          try {
-            const raw = window.localStorage.getItem(key);
-            if (raw) existing = JSON.parse(raw) || {};
-          } catch (e) {
-            console.warn("Failed to parse existing localStorage autosave:", e);
-          }
-          const merged = smartMerge(existing, data || {});
-          const sanitized = sanitizeForStorage(merged, formInstance);
-          if (sanitized) {
-            window.localStorage.setItem(key, JSON.stringify(sanitized));
-            console.log('Fallback: Autosave saved to localStorage');
-          }
-        }
-      } catch (fallbackErr) {
-        console.error('Both IndexedDB and localStorage autosave failed:', fallbackErr);
-      }
+      console.warn("Failed to save autosave to localStorage:", err);
     }
   }
 
-  async function loadFromIndexedDB() {
+  function loadFromLocalStorage() {
     try {
-      if (typeof window === "undefined") return null;
+      if (typeof window === "undefined" || !window.localStorage) return null;
       const key = getAutosaveKey();
-      
-      let parsed = null;
-      try {
-        parsed = await formDB.load(key);
-        if (parsed) {
-          console.log('Autosave loaded from IndexedDB successfully');
-        }
-      } catch (err) {
-        console.warn('IndexedDB load failed, trying localStorage fallback:', err);
-        // Fallback to localStorage
-        if (window.localStorage) {
-          const raw = window.localStorage.getItem(key);
-          if (raw) {
-            parsed = JSON.parse(raw);
-            console.log('Fallback: Autosave loaded from localStorage');
-          }
-        }
-      }
+      const raw = window.localStorage.getItem(key);
+      if (!raw) return null;
 
-      if (!parsed) return null;
+      const parsed = JSON.parse(raw);
 
       // Sanitize loaded data - clean up mixed keys in sparse objects
       if (parsed && typeof parsed === "object") {
@@ -1674,7 +1439,7 @@
 
       return parsed;
     } catch (err) {
-      console.warn("Failed to load autosave:", err);
+      console.warn("Failed to load autosave from localStorage:", err);
       return null;
     }
   }
@@ -1777,30 +1542,13 @@
     return result;
   }
 
-  async function clearIndexedDB() {
+  function clearLocalStorage() {
     try {
-      if (typeof window === "undefined") return;
+      if (typeof window === "undefined" || !window.localStorage) return;
       const key = getAutosaveKey();
-      
-      // Clear from IndexedDB
-      try {
-        await formDB.remove(key);
-        console.log('Autosave cleared from IndexedDB successfully');
-      } catch (err) {
-        console.warn('IndexedDB clear failed:', err);
-      }
-      
-      // Also clear from localStorage (fallback/legacy data)
-      try {
-        if (window.localStorage) {
-          window.localStorage.removeItem(key);
-          console.log('Fallback: Autosave cleared from localStorage');
-        }
-      } catch (err) {
-        console.warn("Failed to clear autosave from localStorage:", err);
-      }
+      window.localStorage.removeItem(key);
     } catch (err) {
-      console.warn("Failed to clear autosave:", err);
+      console.warn("Failed to clear autosave from localStorage:", err);
     }
   }
 
@@ -2242,27 +1990,6 @@
       return;
     }
 
-    // Check IndexedDB availability and initialize
-    try {
-      isDBAvailable = await checkIndexedDBAvailability();
-      
-      if (isDBAvailable) {
-        await formDB.init();
-        isDBInitialized = true;
-        console.log('IndexedDB initialized successfully');
-        
-        // Migrate existing localStorage data to IndexedDB
-        await migrateFromLocalStorage();
-      } else {
-        console.warn('IndexedDB not available, will use localStorage fallback');
-        isDBInitialized = false;
-      }
-    } catch (error) {
-      console.warn('IndexedDB initialization failed, will use localStorage fallback:', error);
-      isDBInitialized = false;
-      isDBAvailable = false;
-    }
-
     try {
       const session = load();
 
@@ -2297,7 +2024,7 @@
 
       // Render Form.io form
       isProgrammaticChange = true;
-      Formio.createForm(formElement, fetchedSchema).then(async (formInstance) => {
+      Formio.createForm(formElement, fetchedSchema).then((formInstance) => {
         form = formInstance;
 
         // Use fetchedSchema.data if available, otherwise extract defaultValues from components
@@ -2312,9 +2039,9 @@
         // Initialize previous form data
         previousFormData = { ...initialData };
 
-        // Try to restore any autosaved draft from IndexedDB/localStorage
+        // Try to restore any autosaved draft from localStorage
         try {
-          const saved = await loadFromIndexedDB();
+          const saved = loadFromLocalStorage();
           if (saved && typeof saved === "object") {
             // Merge saved (draft) with fetched data - handles sparse objects properly
             const mergedData = mergeLocalStorageWithFetchedData(
@@ -2330,7 +2057,7 @@
           console.warn("Failed to restore autosave:", err);
         }
 
-        form.on("change", async (event) => {
+        form.on("change", (event) => {
           // Only process the change if it wasn't programmatic
           if (!isProgrammaticChange) {
             let changedFields = {};
@@ -2632,10 +2359,10 @@
                 }
               });
 
-              // Autosave only the filtered top-level fields to IndexedDB/localStorage.
+              // Autosave only the filtered top-level fields to localStorage.
               try {
                 if (Object.keys(filteredPayload).length > 0) {
-                  await saveToIndexedDB(filteredPayload, form);
+                  saveToLocalStorage(filteredPayload, form);
                 }
               } catch (err) {
                 console.warn("Autosave failed:", err);
@@ -2869,7 +2596,7 @@
   }
 
   // Process submit responses centrally to support dynamic modal from backend
-  async function processSubmitResponse(submitResponse, submissionData) {
+  function processSubmitResponse(submitResponse, submissionData) {
     console.log("[MODAL DEBUG] processSubmitResponse called");
     console.log("[MODAL DEBUG] submitResponse:", submitResponse);
 
@@ -2887,7 +2614,7 @@
 
         // Clear autosave when modal is shown after successful submit
         try {
-          await clearIndexedDB();
+          clearLocalStorage();
           console.log("[MODAL DEBUG] Cleared autosave after modal submission");
         } catch (e) {
           console.warn("[MODAL DEBUG] Failed to clear autosave:", e);
